@@ -6,11 +6,13 @@ const Nutrition = ({ user }) => {
 
     useEffect(() => {
         fetchFood();
+        // eslint-disable-next-line
     }, []);
 
     const fetchFood = async () => {
         try {
-            const res = await fetch(http://localhost:5000/api/food?email=${user.email});
+// Add the backtick ` at the start and end of the URL
+            const res = await fetch(`http://localhost:5000/api/food?email=${user.email}`);
             if(res.ok) {
                 const data = await res.json();
                 setFoods(data);

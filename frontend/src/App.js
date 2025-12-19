@@ -2,7 +2,7 @@ import { useState } from 'react';
 import './App.css';
 
 // NOTE: We will import Friend's components here later
-// import Nutrition from './components/Nutrition';
+import Nutrition from './components/Nutrition';
 // import Fitness from './components/Fitness';
 // import SocialAdmin from './components/SocialAdmin';
 
@@ -48,7 +48,7 @@ function App() {
             </div>
         );
       case 'food':
-        return <div className="glass-panel"><h2>🥗 Nutrition Component Loading...</h2><p>(Friend 2 will upload this part)</p></div>;
+        return <Nutrition user={user} />;
       case 'activity':
         return <div className="glass-panel"><h2>🔥 Fitness Component Loading...</h2><p>(Friend 3 will upload this part)</p></div>;
       case 'admin':
