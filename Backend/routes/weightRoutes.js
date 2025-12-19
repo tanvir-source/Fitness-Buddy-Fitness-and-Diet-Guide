@@ -1,11 +1,8 @@
-const express = require('express');
-const router = express.Router();
-const { addWeight, getWeightHistory } = require('../controllers/weightController');
-
-// POST http://localhost:5000/api/weight -> Adds a weight
-router.post('/', addWeight);
-
-// GET http://localhost:5000/api/weight -> Gets history
-router.get('/', getWeightHistory);
-
-module.exports = router;
+const mongoose = require('mongoose');
+const foodSchema = new mongoose.Schema({
+  user_email: String, // Friend 2 might use 'user_email' or just 'email'
+  foodName: String,
+  calories: Number,
+  date: { type: Date, default: Date.now }
+});
+module.exports = mongoose.model('Food', foodSchema);
