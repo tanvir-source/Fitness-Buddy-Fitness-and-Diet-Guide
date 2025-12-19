@@ -10,19 +10,19 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 3. Import Routes (The Architect's Core)
-// Only keep YOUR files active. Comment out the others.
+// 3. Import Routes
+// ✅ YOUR ROUTES (Architect)
 const userRoutes = require('./routes/userRoutes');
-const weightRoutes = require('./routes/weightRoutes');     // You kept this
-const profileRoutes = require('./routes/profileRoutes');   // You kept this
+const weightRoutes = require('./routes/weightRoutes');
 
-// --- TEAM MODULES (Currently commented out so server doesn't crash) ---
-// const activityRoutes = require('./routes/activityRoutes'); // Friend 3
-// const stepRoutes = require('./routes/stepRoutes');         // Friend 3
-// const waterRoutes = require('./routes/waterRoutes');       // Friend 2
-// const foodRoutes = require('./routes/foodRoutes');         // Friend 2
-// const postRoutes = require('./routes/postRoutes');         // Friend 4
-// const adminRoutes = require('./routes/adminRoutes');       // Friend 4
+// ✅ FRIEND 2 (Nutrition) - Changed to 'foodRoutes' to fix your error
+const foodRoutes = require('./routes/foodRoutes'); 
+
+// ✅ FRIEND 3 (Fitness)
+const activityRoutes = require('./routes/activityRoutes');
+
+// ✅ FRIEND 4 (Social)
+const socialRoutes = require('./routes/socialRoutes');
 
 // 4. Connect Database
 const connectDB = async () => {
@@ -37,18 +37,14 @@ const connectDB = async () => {
 connectDB();
 
 // 5. Use Routes
-// Note: We use specific paths for clarity
-app.use('/api', userRoutes);            // Handles Login/Register
-app.use('/api/weight', weightRoutes);   // Your Feature
-app.use('/api/profile', profileRoutes); // Your Feature
+app.use('/api/users', userRoutes);         // Login/Register
+app.use('/api/weight', weightRoutes);      // Your Weight Feature
 
-// --- TEAM ROUTES (Uncomment these when friends merge their code) ---
-// app.use('/api/activity', activityRoutes);
-// app.use('/api/steps', stepRoutes);
-// app.use('/api/water', waterRoutes);
-// app.use('/api/food', foodRoutes);
-// app.use('/api/posts', postRoutes);
-// app.use('/api/admin', adminRoutes);
+// Changed to match the import above
+app.use('/api/food', foodRoutes);          // Friend 2 (Nutrition)
+
+app.use('/api/activity', activityRoutes);  // Friend 3 (Fitness)
+app.use('/api/social', socialRoutes);      // Friend 4 (Social Wall)
 
 // 6. Start Server
 const PORT = process.env.PORT || 5000;

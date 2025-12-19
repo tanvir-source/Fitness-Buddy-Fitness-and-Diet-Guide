@@ -1,13 +1,14 @@
 import { useState } from 'react'; 
 import './App.css';
 
-// NOTE: We will import Friend's components here later
-import Nutrition from './components/Nutrition';
-// import Fitness from './components/Fitness';
-// import SocialAdmin from './components/SocialAdmin';
+// ✅ IMPORT TEAM COMPONENTS
+import Nutrition from './components/Nutrition';   // Friend 2
+import Fitness from './components/Fitness';       // Friend 3
+import SocialAdmin from './components/SocialAdmin'; // Friend 4
+import Weight from './components/Weight';         // ✅ YOUR COMPONENT (Architect)
 
 function App() {
-  // --- CORE STATES (Architect's Responsibility) ---
+  // --- CORE STATES ---
   const [user, setUser] = useState(null); 
   const [isLogin, setIsLogin] = useState(true);
   const [currentView, setCurrentView] = useState('dashboard');
@@ -17,15 +18,21 @@ function App() {
   // --- HANDLERS ---
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
-    const endpoint = isLogin ? 'http://localhost:5000/api/login' : 'http://localhost:5000/api/users';
+    
+    // ✅ FIXED: Updated path to match Backend/routes/userRoutes.js
+    const endpoint = isLogin 
+        ? 'http://localhost:5000/api/users/login' 
+        : 'http://localhost:5000/api/users';
+        
     const payload = isLogin ? { email: authData.email, password: authData.password } : authData;
+    
     try {
       const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const data = await res.json();
       if (res.ok) {
         if (isLogin) { 
             setUser(data.user); 
-            setCurrentView(data.user.email === 'admin@fitness.com' ? 'admin' : 'dashboard'); 
+            setCurrentView('dashboard'); 
         } else { 
             setIsLogin(true); setMessage('✅ Registered! Please Login.'); 
         }
@@ -43,23 +50,29 @@ function App() {
             <div className="fade-in">
                 <div className="glass-panel">
                     <h1>Welcome, {user.name}</h1>
-                    <p>Select a feature from the menu to get started.</p>
+                    <p>Track your progress and stay consistent!</p>
                 </div>
+                
+                {/* ✅ YOUR FEATURE IS NOW HERE */}
+                <Weight user={user} />
             </div>
         );
+        
       case 'food':
         return <Nutrition user={user} />;
+      
       case 'activity':
-        return <div className="glass-panel"><h2>🔥 Fitness Component Loading...</h2><p>(Friend 3 will upload this part)</p></div>;
-      case 'admin':
+        return <Fitness user={user} />;
+      
       case 'community':
-        return <div className="glass-panel"><h2>🛡️ Admin & Social Loading...</h2><p>(Friend 4 will upload this part)</p></div>;
+        return <SocialAdmin user={user} />;
+      
       default:
-        return <div className="glass-panel"><h2>🚧 Feature Under Construction</h2></div>;
+        return <div className="glass-panel"><h2>Feature Under Construction</h2></div>;
     }
   };
 
-  // --- LOGIN SCREEN (Architect's Work) ---
+  // --- LOGIN SCREEN ---
   if (!user) return (
     <div className="app-background bg-login" style={{alignItems:'center', justifyContent:'center'}}>
         <div className="glass-panel" style={{ width: '350px', textAlign: 'center', padding: '40px' }}>
@@ -79,7 +92,7 @@ function App() {
     </div>
   );
 
-  // --- MAIN APP SHELL (Architect's Work) ---
+  // --- MAIN APP SHELL ---
   return (
     <div className="app-background bg-dashboard">
       <div style={{ position: 'fixed', right: '20px', top: '50%', transform: 'translateY(-50%)', zIndex: 1000 }}>
@@ -87,7 +100,7 @@ function App() {
             <NavIcon icon="🏠" label="Home" active={currentView === 'dashboard'} onClick={() => setCurrentView('dashboard')} />
             <NavIcon icon="🥗" label="Food" active={currentView === 'food'} onClick={() => setCurrentView('food')} />
             <NavIcon icon="🔥" label="Activity" active={currentView === 'activity'} onClick={() => setCurrentView('activity')} />
-            <NavIcon icon="🛡️" label="Admin/Social" active={currentView === 'community'} onClick={() => setCurrentView('community')} />
+            <NavIcon icon="🛡️" label="Community" active={currentView === 'community'} onClick={() => setCurrentView('community')} />
         </div>
       </div>
       <div style={{ flex: 1, padding: '30px', marginRight: '90px', overflowY: 'auto' }}>
