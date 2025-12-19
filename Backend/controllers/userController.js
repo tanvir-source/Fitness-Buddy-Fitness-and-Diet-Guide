@@ -1,39 +1,54 @@
 const User = require('../models/User');
 
-// 1. REGISTER USER
+// 1. REGISTER USER (Simple Version - No Encryption)
 const createUser = async (req, res) => {
+  const { name, email, password } = req.body;
+
   try {
-    const { name, email, password } = req.body;
-    const newUser = new User({ name, email, password });
-    await newUser.save();
-    res.status(201).json({ message: "User created successfully!", user: newUser });
+    // Check if user already exists
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ error: 'User already exists' });
+    }
+
+    // Create the user exactly as typed
+    const user = await User.create({ 
+      name, 
+      email, 
+      password // Saving plain text password for stability
+    });
+
+    res.status(201).json({ 
+      message: "User registered successfully",
+      user: { id: user._id, name: user.name, email: user.email } 
+    });
+
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Registration Error:", error);
+    res.status(400).json({ error: error.message });
   }
 };
 
-// 2. LOGIN USER (This is the new part!)
+// 2. LOGIN USER (Simple Version)
 const loginUser = async (req, res) => {
+  const { email, password } = req.body;
+
   try {
-    const { email, password } = req.body;
-
-    // Check if user exists
+    // Find the user
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+
+    // Check if user exists AND password matches exactly
+    if (user && user.password === password) {
+      res.json({ 
+        user: { id: user._id, name: user.name, email: user.email } 
+      });
+    } else {
+      res.status(400).json({ error: 'Invalid email or password' });
     }
-
-    // Check password (In a real app, we would use encryption here)
-    if (user.password !== password) {
-      return res.status(401).json({ error: "Invalid password" });
-    }
-
-    res.status(200).json({ message: "Login successful!", user });
-
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Login Error:", error);
+    res.status(400).json({ error: error.message });
   }
 };
 
-// Export BOTH functions
 module.exports = { createUser, loginUser };

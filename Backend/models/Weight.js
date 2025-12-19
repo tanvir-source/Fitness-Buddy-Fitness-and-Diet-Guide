@@ -7,8 +7,8 @@ const weightSchema = new mongoose.Schema({
   },
   weight: { type: Number, required: true },
   
-  // NEW: Body Measurements (Optional)
-  waist: { type: Number }, // in inches
+ 
+  waist: { type: Number }, 
   chest: { type: Number },
   arms: { type: Number },
   thighs: { type: Number },
