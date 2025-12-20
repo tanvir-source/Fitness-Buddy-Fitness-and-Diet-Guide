@@ -2,30 +2,27 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 
-// --- 1. Define Profile Schema ---
+// 1. Schema
 const profileSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     age: Number,
     gender: String,
-    height: Number, // in cm
+    height: Number, 
     currentWeight: Number,
-    activityLevel: String, // 'sedentary', 'light', 'moderate', 'active'
-    goal: String // 'lose', 'maintain', 'gain'
+    activityLevel: String, 
+    goal: String
 });
 
 const Profile = mongoose.models.Profile || mongoose.model('Profile', profileSchema);
 
-// --- 2. Routes ---
-
-// UPDATE or CREATE Profile
+// 2. Update/Create Profile
 router.post('/', async (req, res) => {
     try {
         const { email, ...updateData } = req.body;
-        // Find by email and update, or create if doesn't exist (upsert)
         const profile = await Profile.findOneAndUpdate(
             { email }, 
             updateData, 
-            { new: true, upsert: true }
+            { new: true, upsert: true } // Create if not exists
         );
         res.json(profile);
     } catch (err) {
@@ -33,7 +30,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// GET Profile by Email
+// 3. Get Profile
 router.get('/:email', async (req, res) => {
     try {
         const profile = await Profile.findOne({ email: req.params.email });
