@@ -3,123 +3,143 @@ import { useState, useEffect } from 'react';
 const Weight = ({ user }) => {
     const [weights, setWeights] = useState([]);
     const [kg, setKg] = useState('');
-    const [message, setMessage] = useState('');
 
-    // 1. Fetch weights when the component loads or user changes
-    useEffect(() => {
-        if (user) {
-            fetchWeights();
-        }
-        // eslint-disable-next-line
-    }, [user]);
-
-    // 2. Function to get data from Backend
+    // --- 1. DEFINE FUNCTIONS FIRST ---
+    
     const fetchWeights = async () => {
+        if (!user?.email) return;
         try {
-            // Matches Backend Route: router.get('/:email', ...)
             const res = await fetch(`http://localhost:5000/api/weight/${user.email}`);
-            const data = await res.json();
-            
             if (res.ok) {
-                setWeights(data);
-            } else {
-                console.error("Failed to fetch weights");
+                const data = await res.json();
+                // We need date sorting for the line chart to look right (Oldest -> Newest)
+                const sortedData = data.sort((a, b) => new Date(a.date) - new Date(b.date));
+                setWeights(sortedData); 
             }
-        } catch (err) {
-            console.error("Connection Error:", err);
-        }
+        } catch (err) { console.error(err); }
     };
 
-    // 3. Function to send data to Backend
     const addWeight = async () => {
-        if (!kg) return; // Don't submit empty
-        
-        const payload = {
-            email: user.email,
-            weight: kg,
-            date: new Date().toISOString().split('T')[0] // Formats today as "2025-12-19"
-        };
-
+        if (!kg || !user?.email) return;
         try {
-            // Matches Backend Route: router.post('/add', ...)
-            const res = await fetch('http://localhost:5000/api/weight/add', {
+            await fetch('http://localhost:5000/api/weight', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ email: user.email, weight: Number(kg), date: new Date().toISOString().split('T')[0] })
             });
-
-            if (res.ok) {
-                setMessage('✅ Saved!');
-                setKg('');         // Clear input
-                fetchWeights();    // Refresh list immediately
-                setTimeout(() => setMessage(''), 3000); // Hide message after 3s
-            } else {
-                setMessage('❌ Error saving');
-            }
-        } catch (err) {
-            setMessage('❌ Server Error');
-            console.error(err);
-        }
+            setKg('');
+            fetchWeights();
+        } catch (err) { console.error(err); }
     };
 
-    return (
-        <div className="glass-panel fade-in" style={{ marginTop: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2 style={{ color: '#a55eea', margin: 0 }}>⚖️ Weight Tracker</h2>
-                {message && <span style={{ fontSize: '0.8rem', color: message.includes('✅') ? '#0f0' : '#f00' }}>{message}</span>}
-            </div>
+    // --- 2. CHART CALCULATION LOGIC ---
+    
+    // Get last 10 entries for the graph
+    const dataPoints = weights.slice(-10);
+    
+    // Find min/max to scale the graph vertically
+    const maxW = Math.max(...dataPoints.map(w => w.weight), 100);
+    const minW = Math.min(...dataPoints.map(w => w.weight), 0);
+    const range = maxW - minW || 1; // Avoid divide by zero
 
-            <p style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '15px' }}>
-                Keep tracking to reach your goal!
-            </p>
+    // Generate SVG Points: "x,y x,y x,y"
+    // Graph Dimensions: 100% width, 150px height
+    const getSvgPoints = () => {
+        if (dataPoints.length < 2) return "";
+        return dataPoints.map((entry, index) => {
+            const x = (index / (dataPoints.length - 1)) * 100; // X as Percentage (0 to 100)
             
-            {/* Input Section */}
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+            // Y Calculation: (Value - Min) / Range. Invert because SVG 0 is top.
+            // We use 80% of height (10% padding top/bottom)
+            const normalizedY = ((entry.weight - minW) / range);
+            const y = 100 - (normalizedY * 80 + 10); // Scale to 0-100 coordinate space
+            
+            return `${x},${y}`;
+        }).join(" ");
+    };
+
+    // --- 3. RUN EFFECTS LAST ---
+    
+    useEffect(() => {
+        if (user?.email) fetchWeights();
+    }, [user]);
+
+    return (
+        <div className="glass-panel fade-in">
+            <h2 style={{ color: '#a55eea' }}>⚖️ Weight Trends</h2>
+            
+            {/* INPUT SECTION */}
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
                 <input 
                     type="number" 
-                    placeholder="kg" 
+                    placeholder="Today's Weight (kg)" 
                     value={kg} 
-                    onChange={(e) => setKg(e.target.value)}
-                    style={{ 
-                        padding: '10px', 
-                        borderRadius: '10px', 
-                        border: 'none', 
-                        width: '80px',
-                        textAlign: 'center',
-                        fontWeight: 'bold'
-                    }}
+                    onChange={e => setKg(e.target.value)} 
+                    style={{ padding: '15px', flex: 1, borderRadius: '10px', border: 'none' }} 
                 />
-                <button 
-                    onClick={addWeight} 
-                    className="primary-btn" 
-                    style={{ background: '#a55eea', flex: 1 }}
-                >
-                    Add Log
-                </button>
+                <button onClick={addWeight} className="primary-btn">Log Weight</button>
             </div>
 
-            {/* List Section */}
-            <div style={{ maxHeight: '200px', overflowY: 'auto', paddingRight: '5px' }}>
-                {weights.length > 0 ? (
-                    weights.map((entry, index) => (
-                        <div key={index} style={{
-                            display: 'flex', 
-                            justifyContent: 'space-between', 
-                            padding: '12px', 
-                            background: 'rgba(255,255,255,0.05)', 
-                            marginBottom: '8px', 
-                            borderRadius: '8px',
-                            borderLeft: '4px solid #a55eea'
-                        }}>
-                            <span style={{ color: '#ddd' }}>{entry.date}</span>
-                            <span style={{ fontWeight: 'bold', color: '#fff' }}>{entry.weight} kg</span>
-                        </div>
-                    ))
+            {/* 📈 LINE CHART SECTION */}
+            <div style={{ 
+                height: '200px', 
+                background: 'rgba(0,0,0,0.2)', 
+                borderRadius: '15px', 
+                padding: '20px', 
+                marginBottom: '20px', 
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+            }}>
+                {dataPoints.length > 1 ? (
+                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+                        
+                        {/* Grid Lines (Optional) */}
+                        <line x1="0" y1="10" x2="100" y2="10" stroke="#444" strokeWidth="0.2" strokeDasharray="2" />
+                        <line x1="0" y1="50" x2="100" y2="50" stroke="#444" strokeWidth="0.2" strokeDasharray="2" />
+                        <line x1="0" y1="90" x2="100" y2="90" stroke="#444" strokeWidth="0.2" strokeDasharray="2" />
+
+                        {/* The Line Diagram 
+
+[Image of line graph]
+ */}
+                        <polyline 
+                            fill="none" 
+                            stroke="#a55eea" 
+                            strokeWidth="2" 
+                            points={getSvgPoints()} 
+                            vectorEffect="non-scaling-stroke" // Keeps line thickness constant even if stretched
+                        />
+
+                        {/* Dots on the line */}
+                        {dataPoints.map((entry, index) => {
+                            const x = (index / (dataPoints.length - 1)) * 100;
+                            const normalizedY = ((entry.weight - minW) / range);
+                            const y = 100 - (normalizedY * 80 + 10);
+                            return (
+                                <g key={index}>
+                                    <circle cx={x} cy={y} r="1.5" fill="#fff" stroke="#a55eea" strokeWidth="0.5" />
+                                    {/* Tooltip text showing weight */}
+                                    <text x={x} y={y - 5} fontSize="3" fill="#fff" textAnchor="middle">{entry.weight}</text>
+                                </g>
+                            )
+                        })}
+                    </svg>
                 ) : (
-                    <p style={{ color: '#777', fontStyle: 'italic', textAlign: 'center' }}>
-                        No logs yet. Add your weight above!
-                    </p>
+                    <p style={{ color: '#888' }}>Add at least 2 logs to see the graph!</p>
                 )}
+            </div>
+
+            {/* HISTORY LIST (Reversed to show newest first) */}
+            <h3 style={{marginTop: '20px'}}>History</h3>
+            <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                {[...weights].reverse().map((entry, index) => (
+                    <div key={index} style={{ display: 'flex', justifyContent: 'space-between', padding: '15px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                        <span style={{ color: '#aaa' }}>{entry.date}</span>
+                        <strong style={{ color: '#a55eea' }}>{entry.weight} kg</strong>
+                    </div>
+                ))}
             </div>
         </div>
     );
