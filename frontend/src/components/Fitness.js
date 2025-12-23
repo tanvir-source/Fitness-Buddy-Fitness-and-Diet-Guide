@@ -1,26 +1,24 @@
 import { useState, useEffect } from 'react';
 
-// 💪 EXERCISE DATABASE (Calories burned per minute)
-// 
-const exerciseDatabase = [
-    { type: "Running", calsPerMin: 10 },
-    { type: "Cycling", calsPerMin: 8 },
-    { type: "Walking", calsPerMin: 4 },
-    { type: "Gym / Weightlifting", calsPerMin: 6 },
-    { type: "Swimming", calsPerMin: 12 },
-    { type: "Yoga", calsPerMin: 3 },
-    { type: "HIIT Workout", calsPerMin: 14 },
-    { type: "Basketball", calsPerMin: 9 },
+// 🏃‍♂️ PRE-DEFINED EXERCISES & CALORIES PER MINUTE
+const exerciseOptions = [
+    { name: "Running (Fast)", calsPerMin: 12 },
+    { name: "Running (Moderate)", calsPerMin: 10 },
+    { name: "Walking", calsPerMin: 4 },
+    { name: "Cycling", calsPerMin: 8 },
+    { name: "Weight Lifting", calsPerMin: 6 },
+    { name: "Yoga", calsPerMin: 3 },
+    { name: "Swimming", calsPerMin: 11 },
+    { name: "HIIT Workout", calsPerMin: 13 },
 ];
 
 const Fitness = ({ user }) => {
     const [activities, setActivities] = useState([]);
-    const [form, setForm] = useState({ type: '', duration: '', calories: '' });
-    const [burnRate, setBurnRate] = useState(0); // Stores cals/min for selected exercise
+    const [form, setForm] = useState({ activity: '', minutes: '', calories: '' });
 
-    // --- 1. FUNCTIONS ---
-
-    const fetchActivities = async () => {
+    // --- 1. FETCH & SHOW NEWEST FIRST ---
+    const fetchFitness = async () => {
+        if (!user?.email) return;
         try {
             const res = await fetch(`http://localhost:5000/api/activity?email=${user.email}`);
             
@@ -31,113 +29,146 @@ const Fitness = ({ user }) => {
         } catch (err) { console.error(err); }
     };
 
-    const handleSelectExercise = (e) => {
-        const selected = exerciseDatabase.find(ex => ex.type === e.target.value);
-        if (selected) {
-            setForm({ ...form, type: selected.type });
-            setBurnRate(selected.calsPerMin);
-            // Auto calc if duration exists
-            if (form.duration) {
-                setForm(prev => ({ ...prev, type: selected.type, calories: prev.duration * selected.calsPerMin }));
-            }
-        } else {
-            setBurnRate(0);
-        }
-    };
-
-    const handleDurationChange = (e) => {
-        const dur = e.target.value;
-        setForm({ ...form, duration: dur });
+    // --- 2. HANDLE FORM INPUTS & AUTO-CALC ---
+    
+    // When user selects an activity from dropdown
+    const handleSelectActivity = (e) => {
+        const selectedName = e.target.value;
+        const selectedExercise = exerciseOptions.find(ex => ex.name === selectedName);
         
-        // AUTO-CALC LOGIC
-        if (burnRate > 0 && dur) {
-            setForm(prev => ({ ...prev, duration: dur, calories: dur * burnRate }));
+        let calculatedCals = form.calories;
+        
+        // Auto-calculate if minutes are already typed
+        if (selectedExercise && form.minutes) {
+            calculatedCals = selectedExercise.calsPerMin * form.minutes;
         }
+
+        setForm({ ...form, activity: selectedName, calories: calculatedCals });
     };
 
+    // When user types minutes
+    const handleMinutesChange = (e) => {
+        const mins = e.target.value;
+        const selectedExercise = exerciseOptions.find(ex => ex.name === form.activity);
+        
+        let calculatedCals = form.calories;
+
+        // Auto-calculate if an activity is already selected
+        if (selectedExercise && mins) {
+            calculatedCals = selectedExercise.calsPerMin * mins;
+        }
+
+        setForm({ ...form, minutes: mins, calories: calculatedCals });
+    };
+
+    // --- 3. SUBMIT (ADD TO TOP) ---
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!form.activity || !form.minutes) return;
+
+        const newWorkout = { 
+            ...form, 
+            user_email: user.email,
+            date: new Date().toISOString() // Ensure we have a date
+        };
+
         try {
-            const res = await fetch('http://localhost:5000/api/activity', {
+            const res = await fetch('http://localhost:5000/api/fitness', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...form, user_email: user.email })
+                body: JSON.stringify(newWorkout)
             });
+
             if (res.ok) {
-                fetchActivities(); 
-                setForm({ type: '', duration: '', calories: '' }); 
-                setBurnRate(0);
+                // 🟢 OPTION A: Refresh from DB (Safe)
+                fetchFitness(); 
+                
+                // OR 🟢 OPTION B: Instant UI Update (Fast)
+                // setActivities([newWorkout, ...activities]); 
+
+                setForm({ activity: '', minutes: '', calories: '' }); // Reset form
             }
         } catch (err) { console.error(err); }
     };
 
-    // --- 2. EFFECTS ---
+    // --- 4. LOAD DATA ON LOGIN ---
     useEffect(() => {
-        if(user) fetchActivities();
+        if (user) fetchFitness();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
     return (
         <div className="glass-panel fade-in">
-            <h2 style={{color: '#ff4444'}}>🔥 Smart Fitness Log</h2>
+            <h2 style={{color: '#ffa502'}}>🔥 Smart Fitness Log</h2>
             
-            {/* 1. Quick Select */}
-            <div style={{ marginBottom: '15px' }}>
-                <label style={{ fontSize: '0.9rem', color: '#aaa' }}>Select Activity (Auto-Calorie):</label>
-                <select onChange={handleSelectExercise} style={{width: '100%', padding: '10px', borderRadius: '5px', marginTop:'5px'}}>
+            {/* INPUT FORM */}
+            <form onSubmit={handleSubmit} style={{marginBottom:'25px'}}>
+                <label style={{color:'#aaa', fontSize:'0.9rem'}}>Select Activity (Auto-Calorie):</label>
+                
+                {/* Dropdown */}
+                <select 
+                    value={form.activity} 
+                    onChange={handleSelectActivity}
+                    style={{width: '100%', padding: '12px', borderRadius: '8px', marginBottom:'10px', background:'#222', color:'white', border:'1px solid #444'}}
+                >
                     <option value="">-- Select Exercise --</option>
-                    {exerciseDatabase.map((ex, i) => <option key={i} value={ex.type}>{ex.type} (~{ex.calsPerMin} cal/min)</option>)}
+                    {exerciseOptions.map((ex, i) => (
+                        <option key={i} value={ex.name}>{ex.name}</option>
+                    ))}
+                    <option value="Other">Other (Manual Entry)</option>
                 </select>
-            </div>
 
-            {/* 2. Form */}
-            <form onSubmit={handleSubmit} style={{display:'flex', gap:'10px', marginBottom:'20px'}}>
-                <input 
-                    placeholder="Activity Type" 
-                    value={form.type} 
-                    onChange={e => setForm({...form, type: e.target.value})} 
-                    required 
-                    style={{flex: 2, padding:'10px', borderRadius:'5px', border:'none'}} 
-                />
-                <input 
-                    type="number" 
-                    placeholder="Mins" 
-                    value={form.duration} 
-                    onChange={handleDurationChange} 
-                    required 
-                    style={{flex: 1, padding:'10px', borderRadius:'5px', border:'none'}} 
-                />
-                <input 
-                    type="number" 
-                    placeholder="Cals" 
-                    value={form.calories} 
-                    onChange={e => setForm({...form, calories: e.target.value})} 
-                    required 
-                    readOnly={burnRate > 0} // Make read-only if auto-calculated
-                    style={{flex: 1, padding:'10px', borderRadius:'5px', border:'none', background: burnRate > 0 ? '#ddd' : '#fff'}} 
-                />
-                <button type="submit" className="primary-btn" style={{background: 'linear-gradient(45deg, #ff4444, #ff9100)'}}>Add</button>
+                <div style={{display:'flex', gap:'10px'}}>
+                    <input 
+                        type="text" 
+                        placeholder="Activity Type" 
+                        value={form.activity} 
+                        onChange={(e) => setForm({...form, activity: e.target.value})} 
+                        required 
+                        style={{flex: 2, padding:'12px', borderRadius:'8px', border:'none', background:'#222', color:'white'}} 
+                    />
+                    <input 
+                        type="number" 
+                        placeholder="Mins" 
+                        value={form.minutes} 
+                        onChange={handleMinutesChange} 
+                        required 
+                        style={{flex: 1, padding:'12px', borderRadius:'8px', border:'none', background:'#222', color:'white'}} 
+                    />
+                    <input 
+                        type="number" 
+                        placeholder="Cals" 
+                        value={form.calories} 
+                        onChange={(e) => setForm({...form, calories: e.target.value})} 
+                        required 
+                        style={{flex: 1, padding:'12px', borderRadius:'8px', border:'none', background:'#222', color:'white'}} 
+                    />
+                    <button type="submit" className="primary-btn" style={{background:'#ffa502', color:'#000', fontWeight:'bold'}}>Add</button>
+                </div>
             </form>
 
-            {/* 3. List */}
-            <div style={{maxHeight:'300px', overflowY:'auto'}}>
-                {activities.length === 0 && <p style={{color:'#777', textAlign:'center'}}>No workouts yet. Get moving!</p>}
-                
-                {activities.map(item => (
-                    <div key={item._id} style={{
-                        background:'rgba(255,255,255,0.1)', 
-                        padding:'12px', 
-                        margin:'8px 0', 
-                        borderRadius:'8px', 
-                        display:'flex', 
-                        justifyContent:'space-between', 
-                        alignItems:'center',
-                        borderLeft: '4px solid #ff4444'
+            {/* WORKOUT HISTORY LIST */}
+            <div style={{maxHeight:'400px', overflowY:'auto', paddingRight:'5px'}}>
+                {activities.length === 0 && <p style={{textAlign:'center', color:'#777', marginTop:'20px'}}>No workouts logged yet.</p>}
+
+                {activities.map((item, index) => (
+                    <div key={item._id || index} style={{
+                        background: 'linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                        padding: '15px',
+                        marginBottom: '10px',
+                        borderRadius: '10px',
+                        borderLeft: '4px solid #ffa502',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
                     }}>
                         <div>
-                            <strong style={{fontSize:'1.1rem', color:'#fff'}}>{item.type}</strong>
-                            <div style={{fontSize:'0.8rem', color:'#aaa'}}>{item.duration} mins</div>
+                            <h4 style={{margin:0, color:'#fff'}}>{item.activity}</h4>
+                            <small style={{color:'#aaa'}}>{item.minutes} mins</small>
                         </div>
-                        <span style={{color:'#ff4444', fontWeight:'bold', fontSize:'1.2rem'}}>{item.calories} <small>kcal</small></span>
+                        <div style={{textAlign:'right'}}>
+                            <strong style={{color:'#ffa502', fontSize:'1.2rem'}}>{item.calories} kcal</strong>
+                        </div>
                     </div>
                 ))}
             </div>
