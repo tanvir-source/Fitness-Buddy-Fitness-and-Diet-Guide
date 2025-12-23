@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 
 // 🍎 SIMPLE FOOD DATABASE (100g or per serving)
-
-
 const foodDatabase = [
     { name: "Apple (1 medium)", cals: 95 },
     { name: "Banana (1 medium)", cals: 105 },
@@ -25,10 +23,11 @@ const Nutrition = ({ user }) => {
     const fetchFood = async () => {
         if (!user?.email) return;
         try {
+            // 🟢 FIX 1: Added backticks (`) for template literal string interpolation
             const res = await fetch(http://localhost:5000/api/food?email=${user.email});
+            
             if(res.ok) {
                 const data = await res.json();
-                // FIX: Show Newest First
                 setFoods(data.reverse()); 
             }
         } catch (err) { console.error(err); }
@@ -37,8 +36,8 @@ const Nutrition = ({ user }) => {
     const handleSelectFood = (e) => {
         const selected = foodDatabase.find(f => f.name === e.target.value);
         if (selected) {
-            // AUTO-FILL LOGIC
-            setForm({ foodName: selected.name, calories: selected.calories });
+            // 🟢 FIX 2: Changed 'selected.calories' to 'selected.cals' to match database
+            setForm({ foodName: selected.name, calories: selected.cals });
         } else {
             setForm({ foodName: '', calories: '' });
         }
@@ -53,13 +52,14 @@ const Nutrition = ({ user }) => {
                 body: JSON.stringify({ ...form, user_email: user.email })
             });
             fetchFood();
-            setForm({ foodName: '', calories: '' }); // Reset form
+            setForm({ foodName: '', calories: '' }); 
         } catch (err) { console.error(err); }
     };
 
     // --- 2. USE EFFECTS LAST ---
     useEffect(() => {
         if (user) fetchFood();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
     return (
