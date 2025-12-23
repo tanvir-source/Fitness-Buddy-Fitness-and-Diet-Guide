@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 
 // 🍎 SIMPLE FOOD DATABASE (100g or per serving)
-// 
 
-[Image of food energy density chart]
 
 const foodDatabase = [
     { name: "Apple (1 medium)", cals: 95 },

@@ -6,7 +6,7 @@ import Nutrition from './components/Nutrition';
 import Fitness from './components/Fitness';
 import SocialAdmin from './components/SocialAdmin';
 import Weight from './components/Weight';
-import Profile from './components/Profile'; // Your new feature
+import Profile from './components/Profile';
 
 // --- NAVIGATION ICON COMPONENT ---
 const NavIcon = ({ icon, label, active, onClick }) => (
@@ -15,7 +15,7 @@ const NavIcon = ({ icon, label, active, onClick }) => (
         padding: '12px 15px', 
         borderRadius: '12px',
         background: active ? 'linear-gradient(45deg, #00f2ff, #00aaff)' : 'transparent',
-        color: active ? '#000' : '#aaa', // Black text on active for contrast
+        color: active ? '#000' : '#aaa', 
         fontWeight: active ? 'bold' : 'normal',
         marginBottom: '15px',
         display: 'flex',
@@ -28,19 +28,21 @@ const NavIcon = ({ icon, label, active, onClick }) => (
     </div>
 );
 
-// --- SIMPLE DASHBOARD WIDGET ---
-const DashboardCard = ({ title, value, icon, color }) => (
-    <div className="glass-panel" style={{ flex: 1, minWidth: '200px', textAlign: 'center', borderTop: `4px solid ${color}` }}>
-        <div style={{ fontSize: '2rem', marginBottom: '10px' }}>{icon}</div>
-        <h3 style={{ margin: '5px 0', color: '#fff' }}>{title}</h3>
-        <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: color, margin: 0 }}>{value}</p>
+// --- DASHBOARD WIDGET ---
+const DashboardCard = ({ title, value, subtext, icon, color }) => (
+    <div className="glass-panel" style={{ flex: 1, minWidth: '200px', textAlign: 'center', borderTop: `4px solid ${color}`, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: '-10px', right: '-10px', fontSize: '5rem', opacity: 0.1, color: color }}>{icon}</div>
+        <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>{icon}</div>
+        <h3 style={{ margin: '5px 0', color: '#ccc', fontSize: '0.9rem', textTransform: 'uppercase' }}>{title}</h3>
+        <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>{value}</p>
+        <p style={{ fontSize: '0.8rem', color: color, margin: 0 }}>{subtext}</p>
     </div>
 );
 
 function App() {
   const [user, setUser] = useState(null); 
   const [isLogin, setIsLogin] = useState(true);
-  const [currentView, setCurrentView] = useState('dashboard'); // Default to Dashboard
+  const [currentView, setCurrentView] = useState('dashboard'); 
   const [authData, setAuthData] = useState({ name: '', email: '', password: '' });
 
   // --- AUTH HANDLER ---
@@ -67,21 +69,89 @@ function App() {
 
   const handleLogout = () => { setUser(null); setIsLogin(true); };
 
-  // --- DASHBOARD VIEW (Restored) ---
-  const Dashboard = () => (
-      <div className="fade-in">
-          <h2 style={{ marginBottom: '20px' }}>👋 Welcome back, <span style={{ color: '#00f2ff' }}>{user.name}</span></h2>
-          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-              <DashboardCard title="Calories" value="-- / 2000" icon="🔥" color="#ff9100" />
-              <DashboardCard title="Workouts" value="0 Mins" icon="💪" color="#ff4444" />
-              <DashboardCard title="Weight" value="-- kg" icon="⚖️" color="#00ff88" />
+  // --- 📊 SMART DASHBOARD COMPONENT ---
+  const Dashboard = () => {
+      const [stats, setStats] = useState({ 
+          calsEaten: 0, 
+          calsBurned: 0, 
+          workoutMins: 0, 
+          weight: '--' 
+      });
+
+      useEffect(() => {
+          const fetchData = async () => {
+              if (!user?.email) return;
+              try {
+                  // 1. Get Food Data (Sum Calories)
+                  const foodRes = await fetch(`http://localhost:5000/api/food?email=${user.email}`);
+                  const foodData = await foodRes.json();
+                  // Check if array before reducing to prevent crash
+                  const totalFood = Array.isArray(foodData) ? foodData.reduce((acc, item) => acc + (Number(item.calories) || 0), 0) : 0;
+
+                  // 2. Get Activity Data (Sum Mins & Burned)
+                  const actRes = await fetch(`http://localhost:5000/api/activity?email=${user.email}`);
+                  const actData = await actRes.json();
+                  const totalMins = Array.isArray(actData) ? actData.reduce((acc, item) => acc + (Number(item.duration) || 0), 0) : 0;
+                  const totalBurn = Array.isArray(actData) ? actData.reduce((acc, item) => acc + (Number(item.calories) || 0), 0) : 0;
+
+                  // 3. Get Latest Weight
+                  const weightRes = await fetch(`http://localhost:5000/api/weight/${user.email}`);
+                  const weightData = await weightRes.json();
+                  const latestWeight = (Array.isArray(weightData) && weightData.length > 0) ? weightData[0].weight : '--';
+
+                  setStats({ calsEaten: totalFood, calsBurned: totalBurn, workoutMins: totalMins, weight: latestWeight });
+              } catch (err) { console.error("Error fetching stats:", err); }
+          };
+          fetchData();
+      }, []);
+
+      return (
+          <div className="fade-in">
+              <h2 style={{ marginBottom: '20px' }}>👋 Welcome back, <span style={{ color: '#00f2ff' }}>{user.name}</span></h2>
+              
+              {/* STATS GRID */}
+              <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                  <DashboardCard 
+                      title="Calories Eaten" 
+                      value={stats.calsEaten} 
+                      subtext="/ 2000 Target"
+                      icon="🥗" 
+                      color="#00f2ff" 
+                  />
+                  <DashboardCard 
+                      title="Calories Burned" 
+                      value={stats.calsBurned} 
+                      subtext="Great job!"
+                      icon="🔥" 
+                      color="#ff4444" 
+                  />
+                  <DashboardCard 
+                      title="Workout Time" 
+                      value={`${stats.workoutMins} m`} 
+                      subtext="Minutes Active"
+                      icon="⏱️" 
+                      color="#ff9100" 
+                  />
+                  <DashboardCard 
+                      title="Current Weight" 
+                      value={`${stats.weight} kg`} 
+                      subtext="Latest Log"
+                      icon="⚖️" 
+                      color="#a55eea" 
+                  />
+              </div>
+
+              {/* WELCOME BANNER  */}
+              <div style={{ marginTop: '30px', padding: '30px', background: 'linear-gradient(to right, rgba(0, 242, 255, 0.1), transparent)', borderRadius: '15px', borderLeft: '5px solid #00f2ff' }}>
+                  <h3>🚀 Ready to crush your goals?</h3>
+                  <p style={{ color: '#aaa' }}>
+                      You have consumed <strong style={{color:'#fff'}}>{stats.calsEaten}</strong> calories and burned <strong style={{color:'#fff'}}>{stats.calsBurned}</strong> today. 
+                      {stats.calsEaten > stats.calsBurned ? " You are in a surplus." : " You are in a deficit."}
+                  </p>
+              </div>
           </div>
-          <div style={{ marginTop: '30px', padding: '20px', background: 'rgba(255,255,255,0.05)', borderRadius: '15px' }}>
-              <h3>🚀 Quick Actions</h3>
-              <p>Select a tab from the sidebar to start tracking your progress today.</p>
-          </div>
-      </div>
-  );
+      );
+  };
 
   // --- RENDER CONTENT SWITCHER ---
   const renderContent = () => {
@@ -120,7 +190,7 @@ function App() {
   return (
     <div className="bg-dashboard" style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       
-      {/* SIDEBAR (Left Side) */}
+      {/* SIDEBAR */}
       <div style={{ width: '200px', padding: '30px 20px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column' }}>
         <h3 style={{ color: '#fff', marginBottom: '40px', textAlign: 'center', letterSpacing: '2px' }}>FIT<span style={{color:'#00f2ff'}}>BUDDY</span></h3>
         
