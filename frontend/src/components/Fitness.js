@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 // 💪 EXERCISE DATABASE (Calories burned per minute)
 // 
 const exerciseDatabase = [
-    { type: "Running (Moderate)", calsPerMin: 10 },
+    { type: "Running", calsPerMin: 10 },
     { type: "Cycling", calsPerMin: 8 },
     { type: "Walking", calsPerMin: 4 },
     { type: "Gym / Weightlifting", calsPerMin: 6 },

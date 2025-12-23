@@ -23,8 +23,8 @@ const Nutrition = ({ user }) => {
     const fetchFood = async () => {
         if (!user?.email) return;
         try {
-            // 🟢 FIX 1: Added backticks (`) for template literal string interpolation
-            const res = await fetch(http://localhost:5000/api/food?email=${user.email});
+            // FIXED: Added backticks ` ` around the URL
+            const res = await fetch(`http://localhost:5000/api/food?email=${user.email}`);
             
             if(res.ok) {
                 const data = await res.json();
