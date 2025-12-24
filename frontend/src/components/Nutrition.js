@@ -18,71 +18,75 @@ const Nutrition = ({ user }) => {
     const [foods, setFoods] = useState([]);
     const [form, setForm] = useState({ foodName: '', calories: '' });
 
-    // --- 1. DEFINE FUNCTIONS FIRST ---
-
+    // 1. Fetch Food History
     const fetchFood = async () => {
         if (!user?.email) return;
         try {
-            // 🟢 FIX 1: Added backticks (`) for template literal string interpolation
             const res = await fetch(http://localhost:5000/api/food?email=${user.email});
-            
-            if(res.ok) {
+            if (res.ok) {
                 const data = await res.json();
-                setFoods(data.reverse()); 
+                setFoods(data);
             }
         } catch (err) { console.error(err); }
     };
 
-    const handleSelectFood = (e) => {
-        const selected = foodDatabase.find(f => f.name === e.target.value);
-        if (selected) {
-            // 🟢 FIX 2: Changed 'selected.calories' to 'selected.cals' to match database
-            setForm({ foodName: selected.name, calories: selected.cals });
-        } else {
-            setForm({ foodName: '', calories: '' });
-        }
-    };
-
-    const handleSubmit = async (e) => {
+    // 2. Add New Food
+    const handleAddFood = async (e) => {
         e.preventDefault();
+        if (!user?.email) return alert("Please log in first!");
+
         try {
-            await fetch('http://localhost:5000/api/food', {
+            const res = await fetch('http://localhost:5000/api/food', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...form, user_email: user.email })
+                body: JSON.stringify({
+                    user_email: user.email, // ✅ Sending email explicitly
+                    foodName: form.foodName,
+                    calories: Number(form.calories) // ✅ Ensure number format
+                })
             });
-            fetchFood();
-            setForm({ foodName: '', calories: '' }); 
+
+            if (res.ok) {
+                setForm({ foodName: '', calories: '' }); // Clear form
+                fetchFood(); // Refresh list
+            } else {
+                const err = await res.json();
+                alert("Error: " + err.error);
+            }
         } catch (err) { console.error(err); }
     };
 
-    // --- 2. USE EFFECTS LAST ---
-    useEffect(() => {
-        if (user) fetchFood();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user]);
+    useEffect(() => { fetchFood(); }, [user]);
 
     return (
         <div className="glass-panel fade-in">
-            <h2 style={{color: '#00f2ff'}}>🥗 Smart Nutrition</h2>
-            
-            {/* 1. Quick Select Dropdown */}
-            <div style={{ marginBottom: '15px' }}>
-                <label style={{ fontSize: '0.9rem', color: '#aaa' }}>Quick Add from Database:</label>
-                <select onChange={handleSelectFood} style={{width: '100%', padding: '10px', borderRadius: '5px', marginTop:'5px'}}>
-                    <option value="">-- Select Food --</option>
-                    {foodDatabase.map((f, i) => <option key={i} value={f.name}>{f.name} ({f.cals} cal)</option>)}
-                </select>
+            <h2 style={{color: '#00f2ff'}}>🥗 Nutrition Tracker</h2>
+            <p style={{color:'#ccc'}}>Log your daily meals below.</p>
+
+            {/* QUICK ADD BUTTONS */}
+            <div style={{display:'flex', gap:'10px', overflowX:'auto', paddingBottom:'10px', marginBottom:'20px'}}>
+                {foodDatabase.map((item, idx) => (
+                    <button 
+                        key={idx} 
+                        onClick={() => setForm({ foodName: item.name, calories: item.cals })}
+                        style={{
+                            background:'rgba(255,255,255,0.1)', border:'1px solid #333', color:'#aaa', 
+                            padding:'5px 10px', borderRadius:'15px', whiteSpace:'nowrap', cursor:'pointer'
+                        }}
+                    >
+                        {item.name}
+                    </button>
+                ))}
             </div>
 
-            {/* 2. Input Form (Editable) */}
-            <form onSubmit={handleSubmit} style={{display:'flex', gap:'10px', marginBottom:'20px'}}>
+            {/* INPUT FORM */}
+            <form onSubmit={handleAddFood} style={{display:'flex', gap:'10px', marginBottom:'20px'}}>
                 <input 
                     placeholder="Food Name" 
                     value={form.foodName} 
                     onChange={e => setForm({...form, foodName: e.target.value})} 
                     required 
-                    style={{flex: 2, padding:'10px', borderRadius:'5px', border:'none'}} 
+                    style={{flex: 2, padding:'12px', borderRadius:'10px', border:'none', background:'rgba(255,255,255,0.1)', color:'white'}} 
                 />
                 <input 
                     type="number" 
@@ -90,18 +94,18 @@ const Nutrition = ({ user }) => {
                     value={form.calories} 
                     onChange={e => setForm({...form, calories: e.target.value})} 
                     required 
-                    style={{flex: 1, padding:'10px', borderRadius:'5px', border:'none'}} 
+                    style={{flex: 1, padding:'12px', borderRadius:'10px', border:'none', background:'rgba(255,255,255,0.1)', color:'white'}} 
                 />
                 <button type="submit" className="primary-btn">Add</button>
             </form>
 
-            {/* 3. History List (Newest First) */}
+            {/* LIST */}
             <div style={{maxHeight:'300px', overflowY:'auto'}}>
                 {foods.length === 0 && <p style={{color:'#777', textAlign:'center'}}>No meals logged today.</p>}
                 
                 {foods.map(item => (
                     <div key={item._id} style={{
-                        background:'rgba(255,255,255,0.1)', 
+                        background:'rgba(255,255,255,0.05)', 
                         padding:'12px', 
                         margin:'8px 0', 
                         borderRadius:'8px', 
