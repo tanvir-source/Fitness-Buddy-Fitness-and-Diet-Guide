@@ -1,5 +1,18 @@
 import { useState, useEffect } from 'react';
 
+// 🍎 SIMPLE FOOD DATABASE (Quick Add Buttons)
+const foodDatabase = [
+    { name: "Apple", cals: 95 },
+    { name: "Banana", cals: 105 },
+    { name: "Boiled Egg", cals: 78 },
+    { name: "Chicken Breast", cals: 165 },
+    { name: "Rice (1 cup)", cals: 205 },
+    { name: "Pizza Slice", cals: 285 },
+    { name: "Oats (1 cup)", cals: 150 },
+    { name: "Burger", cals: 550 },
+    { name: "Cola", cals: 140 },
+];
+
 const Nutrition = ({ user }) => {
     const [foods, setFoods] = useState([]);
     
@@ -42,74 +55,68 @@ const Nutrition = ({ user }) => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    user_email: user.email, // Sending correct field name
+                    user_email: user.email, // ✅ Matches Backend Expectation
                     foodName: form.foodName,
-                    calories: Number(form.calories) // Ensure it's a number
+                    calories: Number(form.calories)
                 })
             });
 
             if (res.ok) {
-                // Clear form and refresh list
-                setForm({ foodName: '', calories: '' });
-                fetchFood();
+                setForm({ foodName: '', calories: '' }); // Clear form
+                fetchFood(); // Refresh list immediately
             } else {
                 const err = await res.json();
-                alert("Error adding food: " + err.error);
+                alert("Error: " + err.error);
             }
         } catch (err) { console.error("Submit error:", err); }
     };
 
-    // 4. Quick Add from Database
+    // 4. Quick Add Helper
     const quickAdd = (name, cals) => {
         setForm({ foodName: name, calories: cals });
     };
-
-    // Simple Food Database for quick selection
-    const foodDatabase = [
-        { name: "Apple", cals: 95 },
-        { name: "Banana", cals: 105 },
-        { name: "Chicken Breast", cals: 165 },
-        { name: "Rice (1 cup)", cals: 205 },
-        { name: "Pizza Slice", cals: 285 },
-        { name: "Cola", cals: 140 },
-    ];
-
+    
     return (
         <div className="glass-panel fade-in">
             <h2 style={{color: '#00f2ff'}}>🥗 Nutrition Tracker</h2>
             
             <div style={{display:'flex', gap:'20px', flexWrap:'wrap'}}>
                 
-                {/* LEFT: ADD FOOD FORM */}
+                {/* LEFT COLUMN: ADD FOOD FORM */}
                 <div style={{flex: 1, minWidth:'300px'}}>
+                    
+                    {/* FORM CONTAINER */}
                     <form onSubmit={handleSubmit} style={{background:'rgba(255,255,255,0.05)', padding:'20px', borderRadius:'15px'}}>
-                        <div style={{marginBottom:'15px'}}>
-                            <label style={{color:'#aaa', display:'block', marginBottom:'5px'}}>Food Name</label>
-                            <input 
-                                name="foodName"
-                                value={form.foodName}
-                                onChange={handleInputChange}
-                                placeholder="e.g. Burger"
-                                style={{width:'100%', padding:'10px', borderRadius:'8px', border:'none', background:'rgba(0,0,0,0.3)', color:'white'}}
-                            />
-                        </div>
+                        <h4 style={{marginTop:0, color:'#aaa'}}>Add Meal</h4>
+                        
+                        {/* ✅ FIXED LAYOUT: Side-by-Side Inputs */}
+                        <div style={{display: 'flex', gap: '10px', marginBottom: '15px'}}>
+                            <div style={{flex: 2}}>
+                                <input 
+                                    name="foodName"
+                                    value={form.foodName}
+                                    onChange={handleInputChange}
+                                    placeholder="Food Name (e.g. Burger)"
+                                    style={{width:'100%', padding:'12px', borderRadius:'8px', border:'none', background:'rgba(0,0,0,0.3)', color:'white'}}
+                                />
+                            </div>
 
-                        <div style={{marginBottom:'15px'}}>
-                            <label style={{color:'#aaa', display:'block', marginBottom:'5px'}}>Calories</label>
-                            <input 
-                                type="number"
-                                name="calories"
-                                value={form.calories}
-                                onChange={handleInputChange}
-                                placeholder="e.g. 500"
-                                style={{width:'100%', padding:'10px', borderRadius:'8px', border:'none', background:'rgba(0,0,0,0.3)', color:'white'}}
-                            />
+                            <div style={{flex: 1}}>
+                                <input 
+                                    type="number"
+                                    name="calories"
+                                    value={form.calories}
+                                    onChange={handleInputChange}
+                                    placeholder="Cals"
+                                    style={{width:'100%', padding:'12px', borderRadius:'8px', border:'none', background:'rgba(0,0,0,0.3)', color:'white'}}
+                                />
+                            </div>
                         </div>
 
                         <button type="submit" className="primary-btn" style={{width:'100%'}}>Add Meal</button>
                     </form>
 
-                    {/* Quick Add Buttons */}
+                    {/* QUICK ADD BUTTONS */}
                     <div style={{marginTop:'20px'}}>
                         <h4 style={{color:'#aaa', marginTop:0}}>Quick Add</h4>
                         <div style={{display:'flex', gap:'10px', flexWrap:'wrap'}}>
@@ -124,7 +131,8 @@ const Nutrition = ({ user }) => {
                                         padding:'5px 10px', 
                                         borderRadius:'20px', 
                                         cursor:'pointer',
-                                        fontSize:'0.8rem'
+                                        fontSize:'0.8rem',
+                                        transition: '0.2s'
                                     }}
                                 >
                                     {item.name}
@@ -134,12 +142,12 @@ const Nutrition = ({ user }) => {
                     </div>
                 </div>
 
-                {/* RIGHT: HISTORY */}
+                {/* RIGHT COLUMN: HISTORY LIST */}
                 <div style={{flex: 1, minWidth:'300px'}}>
                     <h3 style={{marginTop:0}}>Today's Meals</h3>
                     <div style={{maxHeight:'400px', overflowY:'auto'}}>
                         {foods.length === 0 ? (
-                            <p style={{color:'#777'}}>No meals added yet.</p>
+                            <p style={{color:'#777'}}>No meals added today.</p>
                         ) : (
                             foods.map((item) => (
                                 <div key={item._id} style={{
@@ -153,7 +161,7 @@ const Nutrition = ({ user }) => {
                                     borderLeft:'4px solid #00f2ff'
                                 }}>
                                     <div>
-                                        <div style={{fontWeight:'bold', fontSize:'1.1rem'}}>{item.foodName}</div>
+                                        <div style={{fontWeight:'bold', fontSize:'1.1rem', color:'#fff'}}>{item.foodName}</div>
                                         <div style={{color:'#aaa', fontSize:'0.8rem'}}>{item.date}</div>
                                     </div>
                                     <div style={{color:'#00f2ff', fontWeight:'bold', fontSize:'1.2rem'}}>
