@@ -3,49 +3,34 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
-// 1. Initialize App
 const app = express();
-
-// 2. Middleware
 app.use(cors());
 app.use(express.json());
 
-// 3. Import Routes
-// ✅ YOUR ROUTES (Architect)
+// --- IMPORTS ---
 const userRoutes = require('./routes/userRoutes');
-const weightRoutes = require('./routes/weightRoutes');
-
-// ✅ FRIEND 2 (Nutrition) - Changed to 'foodRoutes' to fix your error
-const foodRoutes = require('./routes/foodRoutes'); 
-
-// ✅ FRIEND 3 (Fitness)
+const weightRoutes = require('./routes/weightRoutes'); // Fixed Version
+const foodRoutes = require('./routes/foodRoutes');
 const activityRoutes = require('./routes/activityRoutes');
-
-// ✅ FRIEND 4 (Social)
 const socialRoutes = require('./routes/socialRoutes');
+const profileRoutes = require('./routes/profileRoutes'); // You missed this in original
+const { getStats } = require('./controllers/statsController'); // New Controller
 
-// 4. Connect Database
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('✅ MongoDB Connected Successfully');
-  } catch (error) {
-    console.error('❌ MongoDB Connection Failed:', error.message);
-    process.exit(1);
-  }
-};
-connectDB();
+// --- DATABASE ---
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('✅ MongoDB Connected'))
+  .catch(err => console.log('❌ DB Error:', err));
 
-// 5. Use Routes
-app.use('/api/users', userRoutes);         // Login/Register
-app.use('/api/weight', weightRoutes);      // Your Weight Feature
+// --- ROUTES ---
+app.use('/api/users', userRoutes);
+app.use('/api/weight', weightRoutes);
+app.use('/api/food', foodRoutes);
+app.use('/api/activity', activityRoutes);
+app.use('/api/social', socialRoutes);
+app.use('/api/profile', profileRoutes);
 
-// Changed to match the import above
-app.use('/api/food', foodRoutes);          // Friend 2 (Nutrition)
+// Manual Route for Stats (Since it's just one function)
+app.get('/api/stats', getStats);
 
-app.use('/api/activity', activityRoutes);  // Friend 3 (Fitness)
-app.use('/api/social', socialRoutes);      // Friend 4 (Social Wall)
-
-// 6. Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

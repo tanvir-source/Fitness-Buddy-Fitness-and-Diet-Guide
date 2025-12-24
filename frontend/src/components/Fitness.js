@@ -20,10 +20,10 @@ const Fitness = ({ user }) => {
 
     // --- 1. FUNCTIONS ---
 
-    const fetchActivities = async () => {
+const fetchActivities = async () => {
         try {
             const res = await fetch(`http://localhost:5000/api/activity?email=${user.email}`);
-            
+
             if (res.ok) {
                 const data = await res.json();
                 setActivities(data);

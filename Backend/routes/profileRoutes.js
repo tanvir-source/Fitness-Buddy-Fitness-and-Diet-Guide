@@ -2,47 +2,68 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 
-// 1. Define Schema Inline (Keeps it simple)
+// 1. Define Schemas
 const profileSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
-    dob: String,      // Saved as "YYYY-MM-DD"
+    dob: String,
     gender: String,
-    height: Number,   // in cm
+    height: Number,
     goal: String,
     activityLevel: String
 });
 
-const Profile = mongoose.models.Profile || mongoose.model('Profile', profileSchema);
+// We need access to the Weight collection to get the latest number
+const weightSchema = new mongoose.Schema({
+    email: { type: String, required: true },
+    weight: { type: Number, required: true },
+    date: { type: String, required: true } 
+});
 
-// 2. GET Profile (Loads data when user logs in)
+const Profile = mongoose.models.Profile || mongoose.model('Profile', profileSchema);
+const Weight = mongoose.models.Weight || mongoose.model('Weight', weightSchema);
+
+// 2. GET Profile (NOW FETCHES LATEST WEIGHT TOO)
 router.get('/:email', async (req, res) => {
     try {
-        const profile = await Profile.findOne({ email: req.params.email });
-        if (profile) {
-            res.json(profile);
-        } else {
-            res.status(404).json({ message: "No profile found" });
+        const email = req.params.email;
+
+        // Fetch Profile Data
+        const profile = await Profile.findOne({ email });
+        
+        // Fetch Latest Weight Entry (Sorted by Date Newest First)
+        const latestWeightEntry = await Weight.findOne({ email }).sort({ date: -1 });
+
+        if (!profile) {
+            return res.status(404).json({ message: "No profile found" });
         }
+
+        // Convert profile to object so we can add new fields
+        let profileData = profile.toObject();
+
+        // INJECT THE LATEST WEIGHT
+        // If a weight entry exists, use it. Otherwise, default to 0.
+        profileData.latestWeight = latestWeightEntry ? latestWeightEntry.weight : 0;
+
+        res.json(profileData);
+
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
 
-// 3. POST/UPDATE Profile (Saves data forever)
+// 3. POST Profile (Update static info like height/age)
 router.post('/', async (req, res) => {
     try {
         const { email, dob, gender, height, goal, activityLevel } = req.body;
         
-        // upsert: true means "Create if not exists, Update if it does"
         const updatedProfile = await Profile.findOneAndUpdate(
             { email },
-            { dob, gender, height, goal, activityLevel },
+            { email, dob, gender, height, goal, activityLevel },
             { new: true, upsert: true }
         );
-        
         res.json(updatedProfile);
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(400).json({ message: err.message });
     }
 });
 

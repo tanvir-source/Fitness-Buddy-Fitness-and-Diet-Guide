@@ -1,9 +1,15 @@
 const mongoose = require('mongoose');
 
 const weightSchema = new mongoose.Schema({
-  email: { type: String, required: true },
+  user_email: { type: String, required: true }, // Changed from 'email' to 'user_email'
   weight: { type: Number, required: true },
-  date: { type: String, required: true } // Storing as YYYY-MM-DD string for simplicity
+  date: { type: String, required: true },
+  // Optional fields for detailed tracking
+  waist: Number,
+  chest: Number,
+  arms: Number,
+  thighs: Number
 });
 
-module.exports = mongoose.model('Weight', weightSchema);
+// Fix OverwriteModelError
+module.exports = mongoose.models.Weight || mongoose.model('Weight', weightSchema);
