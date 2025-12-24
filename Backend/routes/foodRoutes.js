@@ -1,39 +1,27 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose');
+const { addFood, getFoodByDate, deleteFood } = require('../controllers/foodController');
 
-// 1. Define Schema Inline (No separate Model file needed)
-const foodSchema = new mongoose.Schema({
-    user_email: { type: String, required: true },
-    foodName: { type: String, required: true },
-    calories: Number,
-    protein: Number,
-    carbs: Number,
-    fat: Number,
-    date: { type: String, default: () => new Date().toISOString().split('T')[0] } // "YYYY-MM-DD"
-});
+// Route: POST /api/food (Add meal)
+router.post('/', addFood);
 
-const Food = mongoose.models.Food || mongoose.model('Food', foodSchema);
-
-// 2. Route: Add Food
-router.post('/', async (req, res) => {
-    try {
-        // Frontend sends: { user_email, foodName, calories... }
-        const newFood = new Food(req.body);
-        await newFood.save();
-        res.status(201).json(newFood);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// 3. Route: Get Food by Email (Fixed to use Query Param or URL Param)
+// Route: GET /api/food/:date (Get meals for a specific date)
+// OR GET /api/food?email=... (If your controller supports it)
+// based on your controller, it looks like you handle date params or body.
+// Let's standardise it to match your frontend request:
 router.get('/', async (req, res) => {
+    // Your controller expects "req.params.date" or "req.user.id" usually.
+    // But your Frontend Nutrition.js calls: /api/food?email=...
+    
+    // We need to map the Query to the Controller logic manually here 
+    // to bridge the gap between your friends' code styles.
+    const Food = require('../models/Food');
     try {
-        const { email } = req.query; // Matches frontend: /api/food?email=...
+        const { email } = req.query;
         if (!email) return res.status(400).json({ error: "Email required" });
         
-        const foods = await Food.find({ user_email: email });
+        // Simple fetch by email
+        const foods = await Food.find({ user_email: email }).sort({ _id: -1 });
         res.json(foods);
     } catch (err) {
         res.status(500).json({ error: err.message });
