@@ -1,48 +1,70 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose');
+const Profile = require('../models/Profile');
+const Weight = require('../models/Weight');
 
-// 1. Define Schema Inline (Keeps it simple)
-const profileSchema = new mongoose.Schema({
-    email: { type: String, required: true, unique: true },
-    dob: String,      // Saved as "YYYY-MM-DD"
-    gender: String,
-    height: Number,   // in cm
-    goal: String,
-    activityLevel: String
-});
-
-const Profile = mongoose.models.Profile || mongoose.model('Profile', profileSchema);
-
-// 2. GET Profile (Loads data when user logs in)
+// 1. GET Profile (Fetches Profile + Latest Weight + Calculates BMI)
 router.get('/:email', async (req, res) => {
     try {
-        const profile = await Profile.findOne({ email: req.params.email });
-        if (profile) {
-            res.json(profile);
-        } else {
-            res.status(404).json({ message: "No profile found" });
+        const user_email = req.params.email;
+
+        // Fetch Profile & Weight in parallel
+        const profile = await Profile.findOne({ user_email });
+        const latestWeightEntry = await Weight.findOne({ user_email }).sort({ date: -1 });
+
+        // If no profile exists yet, return empty defaults
+        if (!profile) {
+            return res.json({ 
+                msg: "No profile yet", 
+                weight: latestWeightEntry ? latestWeightEntry.weight : 0 
+            });
         }
+
+        // Calculate Stats
+        const currentWeight = latestWeightEntry ? latestWeightEntry.weight : 0;
+        let bmi = 0;
+        
+        // BMI Calculation: Weight (kg) / Height (m)²
+        if (currentWeight > 0 && profile.height > 0) {
+            const heightInMeters = profile.height / 100;
+            bmi = (currentWeight / (heightInMeters * heightInMeters)).toFixed(1);
+        }
+
+        // Send combined data back to frontend
+        res.json({
+            ...profile.toObject(), // Convert mongoose doc to object
+            weight: currentWeight, // Inject the weight from Weight DB
+            bmi: bmi               // Inject the calculated BMI
+        });
+
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        console.error(err);
+        res.status(500).json({ message: "Server Error" });
     }
 });
 
-// 3. POST/UPDATE Profile (Saves data forever)
+// 2. POST/UPDATE Profile (Saves Age, Height, Gender)
 router.post('/', async (req, res) => {
     try {
-        const { email, dob, gender, height, goal, activityLevel } = req.body;
+        // We use user_email to match your other files
+        const { user_email, age, gender, height, activityLevel, goal } = req.body;
         
-        // upsert: true means "Create if not exists, Update if it does"
         const updatedProfile = await Profile.findOneAndUpdate(
-            { email },
-            { dob, gender, height, goal, activityLevel },
-            { new: true, upsert: true }
+            { user_email },
+            { 
+                user_email, 
+                age, 
+                gender, 
+                height, 
+                activityLevel, 
+                goal 
+            },
+            { new: true, upsert: true } // Create if doesn't exist
         );
         
         res.json(updatedProfile);
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(400).json({ message: err.message });
     }
 });
 
