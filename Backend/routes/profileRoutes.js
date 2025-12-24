@@ -12,15 +12,9 @@ const profileSchema = new mongoose.Schema({
     activityLevel: String
 });
 
-// We need access to the Weight collection to get the latest number
-const weightSchema = new mongoose.Schema({
-    email: { type: String, required: true },
-    weight: { type: Number, required: true },
-    date: { type: String, required: true } 
-});
-
+// We need access to the Weight collection
+const Weight = mongoose.models.Weight; 
 const Profile = mongoose.models.Profile || mongoose.model('Profile', profileSchema);
-const Weight = mongoose.models.Weight || mongoose.model('Weight', weightSchema);
 
 // 2. GET Profile (NOW FETCHES LATEST WEIGHT TOO)
 router.get('/:email', async (req, res) => {
@@ -31,7 +25,8 @@ router.get('/:email', async (req, res) => {
         const profile = await Profile.findOne({ email });
         
         // Fetch Latest Weight Entry (Sorted by Date Newest First)
-        const latestWeightEntry = await Weight.findOne({ email }).sort({ date: -1 });
+        // Note: We use 'user_email' because that's how we saved it in the Weight file
+        const latestWeightEntry = await Weight.findOne({ user_email: email }).sort({ date: -1 });
 
         if (!profile) {
             return res.status(404).json({ message: "No profile found" });

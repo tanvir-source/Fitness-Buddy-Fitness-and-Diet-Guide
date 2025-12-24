@@ -15,6 +15,9 @@ const activityRoutes = require('./routes/activityRoutes');
 const socialRoutes = require('./routes/socialRoutes');
 const profileRoutes = require('./routes/profileRoutes'); // You missed this in original
 const { getStats } = require('./controllers/statsController'); // New Controller
+// ... near the top with other imports
+const statsRoutes = require('./routes/statsRoutes');
+
 
 // --- DATABASE ---
 mongoose.connect(process.env.MONGO_URI)
@@ -28,6 +31,8 @@ app.use('/api/food', foodRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/profile', profileRoutes);
+// ... near the bottom where you have app.use(...)
+app.use('/api/stats', statsRoutes);
 
 // Manual Route for Stats (Since it's just one function)
 app.get('/api/stats', getStats);

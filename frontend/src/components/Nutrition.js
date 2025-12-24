@@ -75,7 +75,7 @@ const Nutrition = ({ user }) => {
     const quickAdd = (name, cals) => {
         setForm({ foodName: name, calories: cals });
     };
-    
+
     return (
         <div className="glass-panel fade-in">
             <h2 style={{color: '#00f2ff'}}>🥗 Nutrition Tracker</h2>
