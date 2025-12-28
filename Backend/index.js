@@ -35,7 +35,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/stats', statsRoutes);
 
 // Manual Route for Stats (Since it's just one function)
-app.get('/api/stats', getStats);
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
