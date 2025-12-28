@@ -14,9 +14,9 @@ const foodRoutes = require('./routes/foodRoutes');
 const activityRoutes = require('./routes/activityRoutes');
 const socialRoutes = require('./routes/socialRoutes');
 const profileRoutes = require('./routes/profileRoutes'); // You missed this in original
-const statsRoutes = require('./routes/startRoutes'); // New Controller
+const statsRoutes = require('./routes/statsRoutes'); // New Controller
 // ... near the top with other imports
-const statsRoutes = require('./routes/statsRoutes');
+const waterRoutes = require('./routes/waterRoutes');
 
 
 // --- DATABASE ---
