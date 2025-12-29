@@ -156,31 +156,31 @@ const Nutrition = ({ user, onUpdate }) => {
                             placeholder="Food Name" 
                             value={form.foodName} 
                             onChange={e => setForm({...form, foodName: e.target.value})} 
-                            style={inputStyle}
+                            style={{...inputStyle, marginBottom: '10px'}}
                         />
                         
-                        <div style={{ display: 'flex', gap: '10px' }}>
+                        <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
                             <input 
                                 type="number" placeholder="Cals" 
                                 value={form.calories} onChange={e => setForm({...form, calories: e.target.value})} 
-                                style={inputStyle}
+                                style={{...inputStyle, marginBottom: 0, flex: 1}}
                             />
                             <input 
                                 type="number" placeholder="Prot (g)" 
                                 value={form.protein} onChange={e => setForm({...form, protein: e.target.value})} 
-                                style={inputStyle} 
+                                style={{...inputStyle, marginBottom: 0, flex: 1}} 
                             />
                         </div>
                         <div style={{ display: 'flex', gap: '10px' }}>
                             <input 
                                 type="number" placeholder="Carb (g)" 
                                 value={form.carbs} onChange={e => setForm({...form, carbs: e.target.value})} 
-                                style={inputStyle} 
+                                style={{...inputStyle, marginBottom: 0, flex: 1}} 
                             />
                             <input 
                                 type="number" placeholder="Fat (g)" 
                                 value={form.fat} onChange={e => setForm({...form, fat: e.target.value})} 
-                                style={inputStyle} 
+                                style={{...inputStyle, marginBottom: 0, flex: 1}} 
                             />
                         </div>
 
