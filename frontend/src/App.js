@@ -113,7 +113,7 @@ function App() {
 
   // Dashboard Component
   const Dashboard = () => {
-      const [viewMode, setViewMode] = useState('daily'); // ✅ RESTORED
+      const [viewMode, setViewMode] = useState('daily');
       const [stats, setStats] = useState({ 
           calsEaten: 0, 
           calsBurned: 0, 
@@ -149,7 +149,7 @@ function App() {
           } finally {
               setLoading(false);
           }
-      }, [user?.email, refreshTrigger, viewMode]); // ✅ Added viewMode
+      }, [user?.email, refreshTrigger, viewMode]);
 
       useEffect(() => {
           fetchData();
@@ -161,7 +161,6 @@ function App() {
 
       return (
           <div className="fade-in">
-              {/* ✅ RESTORED Header with Range Selector */}
               <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
                   <h2 style={{ margin: 0 }}>👋 Welcome back, <span style={{ color: '#00f2ff' }}>{user.name}</span></h2>
                   
@@ -194,7 +193,6 @@ function App() {
                   <DashboardCard title="Current Weight" value={`${stats.weight} kg`} subtext="Latest Log" icon="⚖️" color="#a55eea" />
               </div>
 
-              {/* ✅ UPDATED motivation message with viewMode */}
               <div style={{ marginTop: '30px', padding: '30px', background: 'linear-gradient(to right, rgba(0, 242, 255, 0.1), transparent)', borderRadius: '15px', borderLeft: '5px solid #00f2ff' }}>
                   <h3>🚀 {viewMode === 'daily' ? "Today's Focus" : viewMode === 'monthly' ? "This Month's Progress" : "Yearly Overview"}</h3>
                   <p style={{ color: '#aaa' }}>
@@ -214,6 +212,7 @@ function App() {
         case 'food': return <Nutrition user={user} onUpdate={triggerRefresh} />;
         case 'activity': return <Fitness user={user} onUpdate={triggerRefresh} />;
         case 'weight': return <Weight user={user} onUpdate={triggerRefresh} />;
+        case 'recipe': return <Recipe user={user} onUpdate={triggerRefresh} />;
         case 'community': return <SocialAdmin user={user} />;
         default: return <Dashboard />;
     }
@@ -252,6 +251,7 @@ function App() {
         <NavIcon icon="⚖️" label="Weight" active={currentView === 'weight'} onClick={() => setCurrentView('weight')} />
         <NavIcon icon="🥗" label="Nutrition" active={currentView === 'food'} onClick={() => setCurrentView('food')} />
         <NavIcon icon="💪" label="Fitness" active={currentView === 'activity'} onClick={() => setCurrentView('activity')} />
+        <NavIcon icon="🍳" label="Recipe" active={currentView === 'recipe'} onClick={() => setCurrentView('recipe')} />
         <NavIcon icon="💬" label="Community" active={currentView === 'community'} onClick={() => setCurrentView('community')} />
 
         <div style={{ marginTop: 'auto' }}>
