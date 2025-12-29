@@ -7,6 +7,7 @@ import Fitness from './components/Fitness';
 import SocialAdmin from './components/SocialAdmin';
 import Weight from './components/Weight';
 import Profile from './components/Profile';
+import Recipe from './components/Recipe';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 

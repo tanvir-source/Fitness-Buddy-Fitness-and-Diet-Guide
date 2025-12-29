@@ -17,6 +17,7 @@ const profileRoutes = require('./routes/profileRoutes'); // You missed this in o
 const statsRoutes = require('./routes/statsRoutes'); // New Controller
 // ... near the top with other imports
 const waterRoutes = require('./routes/waterRoutes');
+const recipeRoutes = require('./routes/recipeRoutes');
 
 
 // --- DATABASE ---
@@ -33,6 +34,7 @@ app.use('/api/social', socialRoutes);
 app.use('/api/profile', profileRoutes);
 // ... near the bottom where you have app.use(...)
 app.use('/api/stats', statsRoutes);
+app.use('/api', recipeRoutes);
 
 // Manual Route for Stats (Since it's just one function)
 
