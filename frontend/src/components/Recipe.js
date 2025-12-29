@@ -166,6 +166,11 @@ const Recipe = ({ user, onUpdate }) => {
             return;
         }
         
+        if (!recipeId) {
+            alert('Recipe ID not found. Please try again.');
+            return;
+        }
+        
         const isFavorite = favorites.includes(recipeId);
         
         try {
@@ -181,12 +186,18 @@ const Recipe = ({ user, onUpdate }) => {
             if (res.ok) {
                 if (isFavorite) {
                     setFavorites(favorites.filter(id => id !== recipeId));
+                    alert('❤️ Removed from favorites');
                 } else {
                     setFavorites([...favorites, recipeId]);
+                    alert('✅ Added to favorites!');
                 }
+            } else {
+                const errorData = await res.json();
+                alert(`Failed to update favorites: ${errorData.message || 'Unknown error'}`);
             }
         } catch (err) {
             console.error('Failed to toggle favorite:', err);
+            alert('Failed to update favorites. Please try again.');
         }
     };
 
@@ -254,15 +265,19 @@ const Recipe = ({ user, onUpdate }) => {
                         </div>
 
                         <button 
-                            onClick={() => toggleFavorite(selectedRecipe._id)}
+                            onClick={() => {
+                                const recipeId = selectedRecipe._id || selectedRecipe.externalId;
+                                console.log('Toggling favorite for:', recipeId, 'User:', user?.email);
+                                toggleFavorite(recipeId);
+                            }}
                             style={{
                                 ...chipStyle,
-                                background: favorites.includes(selectedRecipe._id) ? '#ff6b9d' : 'rgba(255,255,255,0.1)',
+                                background: favorites.includes(selectedRecipe._id || selectedRecipe.externalId) ? '#ff6b9d' : 'rgba(255,255,255,0.1)',
                                 padding: '10px 20px',
                                 fontSize: '1rem'
                             }}
                         >
-                            {favorites.includes(selectedRecipe._id) ? '❤️ Favorited' : '🤍 Add to Favorites'}
+                            {favorites.includes(selectedRecipe._id || selectedRecipe.externalId) ? '❤️ Favorited' : '🤍 Add to Favorites'}
                         </button>
 
                         <button 
@@ -524,7 +539,9 @@ const Recipe = ({ user, onUpdate }) => {
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            toggleFavorite(recipe._id);
+                                            const recipeId = recipe._id || recipe.externalId;
+                                            console.log('Toggling favorite for:', recipeId, 'User:', user?.email);
+                                            toggleFavorite(recipeId);
                                         }}
                                         style={{
                                             background: 'none',
@@ -535,7 +552,7 @@ const Recipe = ({ user, onUpdate }) => {
                                             marginLeft: '10px'
                                         }}
                                     >
-                                        {favorites.includes(recipe._id) ? '❤️' : '🤍'}
+                                        {favorites.includes(recipe._id || recipe.externalId) ? '❤️' : '🤍'}
                                     </button>
                                 </div>
                                 
