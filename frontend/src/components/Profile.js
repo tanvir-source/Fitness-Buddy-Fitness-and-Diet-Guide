@@ -12,95 +12,129 @@ const Profile = ({ user, onUpdate }) => {
 
     // Display State
     const [stats, setStats] = useState({
-        weight: '--', // This will now come from the DB
+        weight: '--',
         bmi: '--',
         bmiColor: '#fff',
         bmiCategory: 'Unknown',
         age: '--'
     });
 
-    // 1. Fetch Profile + Latest Weight
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    // Fetch Profile + Latest Weight
     const fetchProfile = async () => {
         if (!user?.email) return;
+        
+        setLoading(true);
         try {
-            const res = await fetch(`http://localhost:5000/api/profile/${user.email}`);
-            if (res.ok) {
-                const data = await res.json();
+            // Fetch profile data
+            const profileRes = await fetch(`http://localhost:5000/api/profile/${user.email}`);
+            
+            // Fetch latest weight separately
+            const weightRes = await fetch(`http://localhost:5000/api/weight?email=${user.email}`);
+            
+            if (profileRes.ok && weightRes.ok) {
+                const profileData = await profileRes.json();
+                const weightData = await weightRes.json();
                 
                 // Update Form Fields
                 setFormData({
-                    dob: data.dob || '',
-                    gender: data.gender || 'Male',
-                    height: data.height || '',
-                    activityLevel: data.activityLevel || 'Moderate',
-                    goal: data.goal || 'Maintenance'
+                    dob: profileData.dob || '',
+                    gender: profileData.gender || 'Male',
+                    height: profileData.height || '',
+                    activityLevel: profileData.activityLevel || 'Moderate',
+                    goal: profileData.goal || 'Maintenance'
                 });
 
-                // CALCULATE STATS
-                // Use the 'latestWeight' we sent from the backend
-                const weight = data.latestWeight || 0;
-                const height = data.height || 0;
+                // Get latest weight from weight history
+                const latestWeight = Array.isArray(weightData) && weightData.length > 0 
+                    ? weightData[weightData.length - 1].weight 
+                    : 0;
+
+                // Calculate Stats
+                const height = profileData.height || 0;
                 
                 let calculatedBMI = '--';
                 let color = '#fff';
                 let category = 'Unknown';
 
-                if (weight > 0 && height > 0) {
+                if (latestWeight > 0 && height > 0) {
                     const heightInMeters = height / 100;
-                    calculatedBMI = (weight / (heightInMeters * heightInMeters)).toFixed(1);
+                    calculatedBMI = (latestWeight / (heightInMeters * heightInMeters)).toFixed(1);
 
-                    if (calculatedBMI < 18.5) { color = '#ff9100'; category = 'Underweight'; }
-                    else if (calculatedBMI < 25) { color = '#00ff88'; category = 'Healthy'; }
-                    else { color = '#ff4444'; category = 'Overweight'; }
+                    if (calculatedBMI < 18.5) { 
+                        color = '#ff9100'; 
+                        category = 'Underweight'; 
+                    } else if (calculatedBMI < 25) { 
+                        color = '#00ff88'; 
+                        category = 'Healthy'; 
+                    } else if (calculatedBMI < 30) { 
+                        color = '#ff4444'; 
+                        category = 'Overweight'; 
+                    } else { 
+                        color = '#ff0000'; 
+                        category = 'Obese'; 
+                    }
                 }
 
                 // Calculate Age
                 let ageVal = '--';
-                if (data.dob) {
-                    const birthDate = new Date(data.dob);
+                if (profileData.dob) {
+                    const birthDate = new Date(profileData.dob);
                     const today = new Date();
                     ageVal = today.getFullYear() - birthDate.getFullYear();
+                    const monthDiff = today.getMonth() - birthDate.getMonth();
+                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                        ageVal--;
+                    }
                 }
 
                 setStats({
-                    weight: weight > 0 ? weight : '--', // Show the fetched weight!
+                    weight: latestWeight > 0 ? latestWeight : '--',
                     bmi: calculatedBMI,
                     bmiColor: color,
                     bmiCategory: category,
                     age: ageVal
                 });
             }
-        } catch (err) { console.error(err); }
+        } catch (err) { 
+            console.error('Fetch error:', err);
+            setError('Failed to load profile data');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    // 2. Save Profile (Only saves static info, not weight)
+    // Save Profile
     const handleSave = async (e) => {
         e.preventDefault();
+        setLoading(true);
+        setError('');
+        
         try {
             const res = await fetch('http://localhost:5000/api/profile', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    user_email: user.email,  // ✅ Changed from 'email' to 'user_email'
+                    email: user.email, // Backend route expects 'email'
                     ...formData
                 })
             });
             
             if (res.ok) {
-                alert("Profile Saved!");
-                fetchProfile();
-                
-                // ✅ Call onUpdate to refresh dashboard
-                if (onUpdate) {
-                    onUpdate();
-                }
+                alert("✅ Profile Saved Successfully!");
+                await fetchProfile(); // Refresh to recalculate stats
+                if (onUpdate) onUpdate(); // Notify dashboard to refresh
             } else {
-                const error = await res.json();
-                alert("Error: " + (error.message || "Failed to save"));
+                const errorData = await res.json();
+                setError(errorData.message || 'Failed to save profile');
             }
         } catch (err) { 
-            console.error(err);
-            alert("Network error. Please try again.");
+            console.error('Save error:', err);
+            setError('Network error. Please try again.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -108,72 +142,197 @@ const Profile = ({ user, onUpdate }) => {
 
     return (
         <div className="glass-panel fade-in">
-            <h2 style={{color: '#00f2ff', marginBottom:'20px'}}>👤 Your Profile</h2>
+            <h2 style={{color: '#00f2ff', marginBottom:'30px', display: 'flex', alignItems: 'center', gap: '10px'}}>
+                👤 Your Profile
+            </h2>
+
+            {error && (
+                <div style={{
+                    background: 'rgba(255, 68, 68, 0.2)',
+                    border: '1px solid #ff4444',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    marginBottom: '20px',
+                    color: '#ff4444'
+                }}>
+                    {error}
+                </div>
+            )}
             
-            <div style={{display: 'flex', gap: '20px', flexWrap: 'wrap'}}>
+            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px'}}>
                 
                 {/* LEFT: EDIT FORM */}
-                <form onSubmit={handleSave} style={{flex: 1, minWidth: '300px'}}>
-                    <div style={{marginBottom:'15px'}}>
-                        <label style={{display:'block', color:'#aaa', marginBottom:'5px'}}>Date of Birth</label>
+                <form onSubmit={handleSave}>
+                    <div style={{marginBottom:'20px'}}>
+                        <label style={{display:'block', color:'#aaa', marginBottom:'8px', fontSize:'0.9rem'}}>
+                            Date of Birth
+                        </label>
                         <input 
                             type="date" 
                             value={formData.dob} 
                             onChange={e => setFormData({...formData, dob: e.target.value})}
-                            style={{width:'100%', padding:'10px', borderRadius:'8px', border:'none', background:'rgba(255,255,255,0.1)', color:'white'}}
+                            disabled={loading}
+                            style={{
+                                width:'100%', 
+                                padding:'12px', 
+                                borderRadius:'8px', 
+                                border:'1px solid rgba(255,255,255,0.2)', 
+                                background:'rgba(255,255,255,0.1)', 
+                                color:'white'
+                            }}
                         />
                     </div>
                     
-                    <div style={{marginBottom:'15px'}}>
-                        <label style={{display:'block', color:'#aaa', marginBottom:'5px'}}>Height (cm)</label>
+                    <div style={{marginBottom:'20px'}}>
+                        <label style={{display:'block', color:'#aaa', marginBottom:'8px', fontSize:'0.9rem'}}>
+                            Height (cm)
+                        </label>
                         <input 
                             type="number" 
                             value={formData.height} 
                             onChange={e => setFormData({...formData, height: e.target.value})}
-                            style={{width:'100%', padding:'10px', borderRadius:'8px', border:'none', background:'rgba(255,255,255,0.1)', color:'white'}}
+                            disabled={loading}
+                            placeholder="e.g., 170"
+                            style={{
+                                width:'100%', 
+                                padding:'12px', 
+                                borderRadius:'8px', 
+                                border:'1px solid rgba(255,255,255,0.2)', 
+                                background:'rgba(255,255,255,0.1)', 
+                                color:'white'
+                            }}
                         />
                     </div>
 
-                    <div style={{marginBottom:'15px'}}>
-                        <label style={{display:'block', color:'#aaa', marginBottom:'5px'}}>Gender</label>
+                    <div style={{marginBottom:'20px'}}>
+                        <label style={{display:'block', color:'#aaa', marginBottom:'8px', fontSize:'0.9rem'}}>
+                            Gender
+                        </label>
                         <select 
                             value={formData.gender} 
                             onChange={e => setFormData({...formData, gender: e.target.value})}
-                            style={{width:'100%', padding:'10px', borderRadius:'8px', border:'none', background:'rgba(255,255,255,0.1)', color:'white'}}
+                            disabled={loading}
+                            style={{
+                                width:'100%', 
+                                padding:'12px', 
+                                borderRadius:'8px', 
+                                border:'1px solid rgba(255,255,255,0.2)', 
+                                background:'rgba(255,255,255,0.1)', 
+                                color:'white'
+                            }}
                         >
                             <option>Male</option>
                             <option>Female</option>
                         </select>
                     </div>
 
-                    <button type="submit" className="primary-btn" style={{marginTop:'10px', width:'100%'}}>Save Profile</button>
-                    <p style={{fontSize:'0.8rem', color:'#777', marginTop:'10px', textAlign:'center'}}>
-                        *To update Weight, use the <b>Weight Tracker</b> tab.
+                    <button 
+                        type="submit" 
+                        className="primary-btn" 
+                        disabled={loading}
+                        style={{
+                            marginTop:'10px', 
+                            width:'100%',
+                            opacity: loading ? 0.6 : 1,
+                            cursor: loading ? 'not-allowed' : 'pointer'
+                        }}
+                    >
+                        {loading ? 'Saving...' : 'Save Profile'}
+                    </button>
+                    
+                    <p style={{
+                        fontSize:'0.85rem', 
+                        color:'#777', 
+                        marginTop:'15px', 
+                        textAlign:'center',
+                        lineHeight: '1.5'
+                    }}>
+                        💡 To update Weight, use the <b style={{color: '#a55eea'}}>Weight Tracker</b> tab.
                     </p>
                 </form>
 
                 {/* RIGHT: LIVE STATS */}
-                <div style={{flex: 1, display:'flex', flexDirection:'column', gap:'20px'}}>
+                <div style={{display:'flex', flexDirection:'column', gap:'20px'}}>
                     
                     {/* Age & Weight Row */}
-                    <div style={{display:'flex', gap:'20px'}}>
-                        <div style={{flex:1, background:'rgba(0,0,0,0.3)', padding:'20px', borderRadius:'15px', textAlign:'center', borderTop:'4px solid #00f2ff'}}>
-                            <h3 style={{color:'#aaa', margin:0}}>Age</h3>
-                            <h1 style={{fontSize:'2.5rem', margin:'10px 0', color:'#fff'}}>{stats.age}</h1>
+                    <div style={{display:'grid', gridTemplateColumns: '1fr 1fr', gap:'20px'}}>
+                        <div style={{
+                            background:'rgba(0,0,0,0.3)', 
+                            padding:'25px', 
+                            borderRadius:'15px', 
+                            textAlign:'center', 
+                            borderTop:'4px solid #00f2ff'
+                        }}>
+                            <h3 style={{color:'#aaa', margin:'0 0 10px 0', fontSize:'0.9rem', textTransform: 'uppercase'}}>
+                                Age
+                            </h3>
+                            <h1 style={{fontSize:'3rem', margin:'10px 0', color:'#fff'}}>
+                                {stats.age}
+                            </h1>
                         </div>
-                        <div style={{flex:1, background:'rgba(0,0,0,0.3)', padding:'20px', borderRadius:'15px', textAlign:'center', borderTop:'4px solid #a55eea'}}>
-                            <h3 style={{color:'#aaa', margin:0}}>Weight</h3>
-                            <h1 style={{fontSize:'2.5rem', margin:'10px 0', color:'#fff'}}>{stats.weight} <span style={{fontSize:'1rem', color:'#777'}}>kg</span></h1>
+                        
+                        <div style={{
+                            background:'rgba(0,0,0,0.3)', 
+                            padding:'25px', 
+                            borderRadius:'15px', 
+                            textAlign:'center', 
+                            borderTop:'4px solid #a55eea'
+                        }}>
+                            <h3 style={{color:'#aaa', margin:'0 0 10px 0', fontSize:'0.9rem', textTransform: 'uppercase'}}>
+                                Weight
+                            </h3>
+                            <h1 style={{fontSize:'3rem', margin:'10px 0', color:'#fff'}}>
+                                {stats.weight}
+                                {stats.weight !== '--' && <span style={{fontSize:'1.2rem', color:'#777'}}> kg</span>}
+                            </h1>
                         </div>
                     </div>
 
                     {/* BMI Card */}
-                    <div style={{background:'rgba(0,0,0,0.3)', padding:'20px', borderRadius:'15px', textAlign:'center', borderTop:`4px solid ${stats.bmiColor}`}}>
-                        <h3 style={{color:'#aaa', margin:0}}>BMI Score</h3>
-                        <h1 style={{fontSize:'3.5rem', margin:'10px 0', color: stats.bmiColor}}>{stats.bmi}</h1>
-                        <div style={{color: stats.bmiColor, fontWeight:'bold', textTransform:'uppercase', letterSpacing:'1px'}}>
+                    <div style={{
+                        background:'rgba(0,0,0,0.3)', 
+                        padding:'30px', 
+                        borderRadius:'15px', 
+                        textAlign:'center', 
+                        borderTop:`4px solid ${stats.bmiColor}`,
+                        flex: 1
+                    }}>
+                        <h3 style={{color:'#aaa', margin:'0 0 15px 0', fontSize:'0.9rem', textTransform: 'uppercase'}}>
+                            BMI Score
+                        </h3>
+                        <h1 style={{
+                            fontSize:'4.5rem', 
+                            margin:'15px 0', 
+                            color: stats.bmiColor,
+                            fontWeight: 'bold'
+                        }}>
+                            {stats.bmi}
+                        </h1>
+                        <div style={{
+                            color: stats.bmiColor, 
+                            fontWeight:'bold', 
+                            textTransform:'uppercase', 
+                            letterSpacing:'2px',
+                            fontSize: '1.1rem'
+                        }}>
                             {stats.bmiCategory}
                         </div>
+                        
+                        {stats.bmi !== '--' && (
+                            <div style={{
+                                marginTop: '20px',
+                                padding: '10px',
+                                background: 'rgba(255,255,255,0.05)',
+                                borderRadius: '8px',
+                                fontSize: '0.85rem',
+                                color: '#aaa'
+                            }}>
+                                {stats.bmiCategory === 'Healthy' && '✅ You are in a healthy weight range!'}
+                                {stats.bmiCategory === 'Underweight' && '⚠️ Consider gaining some weight.'}
+                                {stats.bmiCategory === 'Overweight' && '⚠️ Consider a calorie deficit.'}
+                                {stats.bmiCategory === 'Obese' && '🚨 Consult a healthcare professional.'}
+                            </div>
+                        )}
                     </div>
 
                 </div>
