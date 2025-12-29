@@ -139,11 +139,11 @@ const Nutrition = ({ user, onUpdate }) => {
                         
                         {/* Meal Type Selector */}
                         <div style={{ marginBottom: '10px' }}>
-                            <label style={{ fontSize: '0.8rem', color: '#888' }}>Meal Type</label>
+                            <label style={{ fontSize: '0.8rem', color: '#888', display: 'block', marginBottom: '5px' }}>Meal Type</label>
                             <select 
                                 value={form.mealType}
                                 onChange={e => setForm({...form, mealType: e.target.value})}
-                                style={inputStyle}
+                                style={{...inputStyle, marginBottom: 0}}
                             >
                                 <option>Breakfast</option>
                                 <option>Lunch</option>
@@ -347,8 +347,13 @@ const Nutrition = ({ user, onUpdate }) => {
 
 // Styles
 const inputStyle = {
-    width: '100%', padding: '10px', marginBottom: '10px',
-    borderRadius: '8px', border: 'none', background: 'rgba(0,0,0,0.3)', color: 'white'
+    width: '100%', 
+    padding: '10px', 
+    borderRadius: '8px', 
+    border: '1px solid rgba(255,255,255,0.1)', 
+    background: 'rgba(0,0,0,0.3)', 
+    color: 'white',
+    boxSizing: 'border-box'
 };
 
 const chipStyle = {
