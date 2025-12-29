@@ -12,7 +12,7 @@ const foodDatabase = [
     { name: "Cola", cals: 140, p: 0, c: 35, f: 0 },
 ];
 
-const Nutrition = ({ user }) => {
+const Nutrition = ({ user, onUpdate }) => {
     const [foods, setFoods] = useState([]);
     const [calorieGoal] = useState(2000); // Default Goal
     
@@ -63,12 +63,11 @@ const Nutrition = ({ user }) => {
             });
 
             if (res.ok) {
-                setForm({ foodName: '', calories: '', protein: '', carbs: '', fat: '', mealType: 'Breakfast' }); // Reset
+                setForm({ foodName: '', calories: '', protein: '', carbs: '', fat: '', mealType: 'Breakfast' });
                 fetchFood();
-            } else {
-                alert("Failed to add meal");
+                onUpdate(); // ✅ NOTIFY APP TO REFRESH DASHBOARD
             }
-        } catch (err) { console.error("Submit error:", err); }
+        } catch (err) { console.error(err); }
     };
 
     // 3. Quick Add Helper

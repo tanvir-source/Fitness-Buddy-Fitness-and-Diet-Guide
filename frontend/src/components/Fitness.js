@@ -13,7 +13,7 @@ const exerciseDatabase = [
     { type: "Basketball", calsPerMin: 9 },
 ];
 
-const Fitness = ({ user }) => {
+const Fitness = ({ user, onUpdate }) => {
     const [activities, setActivities] = useState([]);
     const [form, setForm] = useState({ type: '', duration: '', calories: '' });
     const [burnRate, setBurnRate] = useState(0); // Stores cals/min for selected exercise
@@ -67,6 +67,7 @@ const fetchActivities = async () => {
                 fetchActivities(); 
                 setForm({ type: '', duration: '', calories: '' }); 
                 setBurnRate(0);
+                onUpdate(); // ✅ NOTIFY APP TO REFRESH DASHBOARD
             }
         } catch (err) { console.error(err); }
     };

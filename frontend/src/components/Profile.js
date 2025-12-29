@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const Profile = ({ user }) => {
+const Profile = ({ user, onUpdate }) => {
     // Form State
     const [formData, setFormData] = useState({
         dob: '', 
@@ -81,16 +81,27 @@ const Profile = ({ user }) => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    email: user.email,
+                    user_email: user.email,  // ✅ Changed from 'email' to 'user_email'
                     ...formData
                 })
             });
             
             if (res.ok) {
                 alert("Profile Saved!");
-                fetchProfile(); // Refresh to recalculate stats
+                fetchProfile();
+                
+                // ✅ Call onUpdate to refresh dashboard
+                if (onUpdate) {
+                    onUpdate();
+                }
+            } else {
+                const error = await res.json();
+                alert("Error: " + (error.message || "Failed to save"));
             }
-        } catch (err) { console.error(err); }
+        } catch (err) { 
+            console.error(err);
+            alert("Network error. Please try again.");
+        }
     };
 
     useEffect(() => { fetchProfile(); }, [user]);

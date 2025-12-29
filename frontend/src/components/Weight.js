@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const Weight = ({ user }) => {
+const Weight = ({ user, onUpdate }) => {
     const [weights, setWeights] = useState([]);
     const [weightInput, setWeightInput] = useState('');
 
@@ -30,7 +30,7 @@ const Weight = ({ user }) => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    user_email: user.email,  // ✅ Matches new Model
+                    user_email: user.email,
                     weight: Number(weightInput), 
                     date: new Date().toISOString().split('T')[0] 
                 })
@@ -38,13 +38,10 @@ const Weight = ({ user }) => {
             if (res.ok) {
                 setWeightInput('');
                 fetchWeights();
-            } else {
-                const err = await res.json();
-                alert("Error: " + (err.error || err.message));
+                onUpdate(); // ✅ NOTIFY APP TO REFRESH DASHBOARD
             }
         } catch (err) { console.error(err); }
     };
-
     useEffect(() => { fetchWeights(); }, [user]);
 
     return (
