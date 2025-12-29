@@ -117,15 +117,15 @@ const Profile = ({ user, onUpdate }) => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    email: user.email, // Backend route expects 'email'
+                    email: user.email,
                     ...formData
                 })
             });
             
             if (res.ok) {
                 alert("✅ Profile Saved Successfully!");
-                await fetchProfile(); // Refresh to recalculate stats
-                if (onUpdate) onUpdate(); // Notify dashboard to refresh
+                await fetchProfile();
+                if (onUpdate) onUpdate();
             } else {
                 const errorData = await res.json();
                 setError(errorData.message || 'Failed to save profile');
@@ -139,6 +139,16 @@ const Profile = ({ user, onUpdate }) => {
     };
 
     useEffect(() => { fetchProfile(); }, [user]);
+
+    const inputStyle = {
+        width: '100%',
+        padding: '12px',
+        borderRadius: '8px',
+        border: '1px solid rgba(255,255,255,0.2)',
+        background: 'rgba(255,255,255,0.1)',
+        color: 'white',
+        boxSizing: 'border-box'
+    };
 
     return (
         <div className="glass-panel fade-in">
@@ -162,7 +172,7 @@ const Profile = ({ user, onUpdate }) => {
             <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px'}}>
                 
                 {/* LEFT: EDIT FORM */}
-                <form onSubmit={handleSave}>
+                <div>
                     <div style={{marginBottom:'20px'}}>
                         <label style={{display:'block', color:'#aaa', marginBottom:'8px', fontSize:'0.9rem'}}>
                             Date of Birth
@@ -172,14 +182,7 @@ const Profile = ({ user, onUpdate }) => {
                             value={formData.dob} 
                             onChange={e => setFormData({...formData, dob: e.target.value})}
                             disabled={loading}
-                            style={{
-                                width:'100%', 
-                                padding:'12px', 
-                                borderRadius:'8px', 
-                                border:'1px solid rgba(255,255,255,0.2)', 
-                                background:'rgba(255,255,255,0.1)', 
-                                color:'white'
-                            }}
+                            style={inputStyle}
                         />
                     </div>
                     
@@ -193,14 +196,7 @@ const Profile = ({ user, onUpdate }) => {
                             onChange={e => setFormData({...formData, height: e.target.value})}
                             disabled={loading}
                             placeholder="e.g., 170"
-                            style={{
-                                width:'100%', 
-                                padding:'12px', 
-                                borderRadius:'8px', 
-                                border:'1px solid rgba(255,255,255,0.2)', 
-                                background:'rgba(255,255,255,0.1)', 
-                                color:'white'
-                            }}
+                            style={inputStyle}
                         />
                     </div>
 
@@ -212,14 +208,7 @@ const Profile = ({ user, onUpdate }) => {
                             value={formData.gender} 
                             onChange={e => setFormData({...formData, gender: e.target.value})}
                             disabled={loading}
-                            style={{
-                                width:'100%', 
-                                padding:'12px', 
-                                borderRadius:'8px', 
-                                border:'1px solid rgba(255,255,255,0.2)', 
-                                background:'rgba(255,255,255,0.1)', 
-                                color:'white'
-                            }}
+                            style={inputStyle}
                         >
                             <option>Male</option>
                             <option>Female</option>
@@ -227,7 +216,7 @@ const Profile = ({ user, onUpdate }) => {
                     </div>
 
                     <button 
-                        type="submit" 
+                        onClick={handleSave}
                         className="primary-btn" 
                         disabled={loading}
                         style={{
@@ -249,7 +238,7 @@ const Profile = ({ user, onUpdate }) => {
                     }}>
                         💡 To update Weight, use the <b style={{color: '#a55eea'}}>Weight Tracker</b> tab.
                     </p>
-                </form>
+                </div>
 
                 {/* RIGHT: LIVE STATS */}
                 <div style={{display:'flex', flexDirection:'column', gap:'20px'}}>
