@@ -7,10 +7,9 @@ const Recipe = ({ user, onUpdate }) => {
     const [selectedRecipe, setSelectedRecipe] = useState(null);
     const [cookingMode, setCookingMode] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
-    const [view, setView] = useState('browse'); // browse, favorites, search
+    const [view, setView] = useState('browse');
     const [searchLoading, setSearchLoading] = useState(false);
     
-    // Filter State
     const [filters, setFilters] = useState({
         search: '',
         maxCalories: '',
@@ -32,83 +31,6 @@ const Recipe = ({ user, onUpdate }) => {
             console.error('Failed to fetch recipes:', err);
         } finally {
             setLoading(false);
-        }
-    };
-
-    // Search recipes from TheMealDB and save to database
-    const searchAndFetchRecipes = async (searchTerm = '') => {
-        setSearchLoading(true);
-        try {
-            let apiRecipes = [];
-
-            if (searchTerm.trim()) {
-                // Search by name
-                const searchRes = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${searchTerm}`);
-                const searchData = await searchRes.json();
-                
-                if (searchData.meals) {
-                    apiRecipes = searchData.meals.map(m => formatRecipe(m));
-                }
-            } else {
-                // Fetch random recipes from various categories
-                const categories = ['Chicken', 'Beef', 'Seafood', 'Vegetarian', 'Pasta', 'Dessert'];
-                
-                for (const category of categories) {
-                    try {
-                        const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${category}`);
-                        const data = await response.json();
-                        
-                        if (data.meals) {
-                            // Get first 3 meals from each category
-                            const categoryMeals = data.meals.slice(0, 3);
-                            
-                            for (const meal of categoryMeals) {
-                                const detailRes = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`);
-                                const detailData = await detailRes.json();
-                                
-                                if (detailData.meals && detailData.meals[0]) {
-                                    apiRecipes.push(formatRecipe(detailData.meals[0]));
-                                }
-                            }
-                        }
-                    } catch (err) {
-                        console.error(`Error fetching ${category}:`, err);
-                    }
-                }
-            }
-
-            // Save fetched recipes to backend database
-            if (apiRecipes.length > 0) {
-                for (const recipe of apiRecipes) {
-                    try {
-                        // Check if recipe already exists
-                        const checkRes = await fetch(`http://localhost:5000/api/recipes/${recipe.externalId}`);
-                        
-                        if (!checkRes.ok) {
-                            // Recipe doesn't exist, add it
-                            await fetch('http://localhost:5000/api/recipes', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(recipe)
-                            });
-                        }
-                    } catch (err) {
-                        console.error('Failed to save recipe:', err);
-                    }
-                }
-                
-                // Refresh recipes from database
-                await fetchRecipes();
-            }
-
-            if (searchTerm.trim() && apiRecipes.length === 0) {
-                alert('No recipes found. Try a different search term.');
-            }
-        } catch (err) {
-            console.error('Failed to search recipes:', err);
-            alert('Failed to search recipes. Please try again.');
-        } finally {
-            setSearchLoading(false);
         }
     };
 
@@ -140,11 +62,84 @@ const Recipe = ({ user, onUpdate }) => {
         };
     };
 
+    // Search recipes from TheMealDB and save to database
+    const searchAndFetchRecipes = async (searchTerm = '') => {
+        setSearchLoading(true);
+        try {
+            let apiRecipes = [];
+
+            if (searchTerm.trim()) {
+                const searchRes = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${searchTerm}`);
+                const searchData = await searchRes.json();
+                
+                if (searchData.meals) {
+                    apiRecipes = searchData.meals.map(m => formatRecipe(m));
+                }
+            } else {
+                const categories = ['Chicken', 'Beef', 'Seafood', 'Vegetarian', 'Pasta', 'Dessert'];
+                
+                for (const category of categories) {
+                    try {
+                        const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${category}`);
+                        const data = await response.json();
+                        
+                        if (data.meals) {
+                            const categoryMeals = data.meals.slice(0, 3);
+                            
+                            for (const meal of categoryMeals) {
+                                const detailRes = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`);
+                                const detailData = await detailRes.json();
+                                
+                                if (detailData.meals && detailData.meals[0]) {
+                                    apiRecipes.push(formatRecipe(detailData.meals[0]));
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        console.error(`Error fetching ${category}:`, err);
+                    }
+                }
+            }
+
+            if (apiRecipes.length > 0) {
+                for (const recipe of apiRecipes) {
+                    try {
+                        const checkRes = await fetch(`http://localhost:5000/api/recipes/external/${recipe.externalId}`);
+                        
+                        if (!checkRes.ok) {
+                            await fetch('http://localhost:5000/api/recipes', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(recipe)
+                            });
+                        }
+                    } catch (err) {
+                        console.error('Failed to save recipe:', err);
+                    }
+                }
+                
+                await fetchRecipes();
+            }
+
+            if (searchTerm.trim() && apiRecipes.length === 0) {
+                alert('No recipes found. Try a different search term.');
+            }
+        } catch (err) {
+            console.error('Failed to search recipes:', err);
+            alert('Failed to search recipes. Please try again.');
+        } finally {
+            setSearchLoading(false);
+        }
+    };
+
     // Fetch user's favorites
     const fetchFavorites = async () => {
-        if (!user?.email) return;
+        if (!user?.email) {
+            setFavorites([]);
+            return;
+        }
         try {
-            const res = await fetch(`http://localhost:5000/api/recipes/favorites?email=${user.email}`);
+            const res = await fetch(`http://localhost:5000/api/recipes/favorites?userEmail=${user.email}`);
             if (res.ok) {
                 const data = await res.json();
                 setFavorites(data.map(f => f.recipeId));
@@ -156,18 +151,21 @@ const Recipe = ({ user, onUpdate }) => {
 
     useEffect(() => {
         fetchRecipes();
-        fetchFavorites();
-    }, [user]);
+        if (user?.email) {
+            fetchFavorites();
+        }
+    }, [user?.email]);
 
     // Toggle favorite
-    const toggleFavorite = async (recipeId) => {
+    const toggleFavorite = async (recipe) => {
         if (!user?.email) {
             alert('Please log in to save favorites');
             return;
         }
         
+        const recipeId = recipe._id;
         if (!recipeId) {
-            alert('Recipe ID not found. Please try again.');
+            alert('Recipe ID not found. Please try refreshing the page.');
             return;
         }
         
@@ -178,22 +176,20 @@ const Recipe = ({ user, onUpdate }) => {
                 method: isFavorite ? 'DELETE' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    email: user.email,
-                    recipeId
+                    userEmail: user.email,
+                    recipeId: recipeId
                 })
             });
 
             if (res.ok) {
                 if (isFavorite) {
-                    setFavorites(favorites.filter(id => id !== recipeId));
-                    alert('❤️ Removed from favorites');
+                    setFavorites(prev => prev.filter(id => id !== recipeId));
                 } else {
-                    setFavorites([...favorites, recipeId]);
-                    alert('✅ Added to favorites!');
+                    setFavorites(prev => [...prev, recipeId]);
                 }
             } else {
                 const errorData = await res.json();
-                alert(`Failed to update favorites: ${errorData.message || 'Unknown error'}`);
+                alert(errorData.message || 'Failed to update favorites');
             }
         } catch (err) {
             console.error('Failed to toggle favorite:', err);
@@ -238,6 +234,8 @@ const Recipe = ({ user, onUpdate }) => {
 
     // Recipe Detail View
     if (selectedRecipe && !cookingMode) {
+        const isFavorited = favorites.includes(selectedRecipe._id);
+        
         return (
             <div className="glass-panel fade-in">
                 <button onClick={() => setSelectedRecipe(null)} className="primary-btn" style={{marginBottom: '20px'}}>
@@ -264,29 +262,30 @@ const Recipe = ({ user, onUpdate }) => {
                             )}
                         </div>
 
-                        <button 
-                            onClick={() => {
-                                const recipeId = selectedRecipe._id || selectedRecipe.externalId;
-                                console.log('Toggling favorite for:', recipeId, 'User:', user?.email);
-                                toggleFavorite(recipeId);
-                            }}
-                            style={{
-                                ...chipStyle,
-                                background: favorites.includes(selectedRecipe._id || selectedRecipe.externalId) ? '#ff6b9d' : 'rgba(255,255,255,0.1)',
-                                padding: '10px 20px',
-                                fontSize: '1rem'
-                            }}
-                        >
-                            {favorites.includes(selectedRecipe._id || selectedRecipe.externalId) ? '❤️ Favorited' : '🤍 Add to Favorites'}
-                        </button>
+                        <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
+                            <button 
+                                onClick={() => toggleFavorite(selectedRecipe)}
+                                disabled={!user?.email}
+                                style={{
+                                    ...chipStyle,
+                                    background: isFavorited ? '#ff6b9d' : 'rgba(255,255,255,0.1)',
+                                    padding: '10px 20px',
+                                    fontSize: '1rem',
+                                    opacity: !user?.email ? 0.5 : 1,
+                                    cursor: !user?.email ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                {isFavorited ? '❤️ Favorited' : '🤍 Add to Favorites'}
+                            </button>
 
-                        <button 
-                            onClick={() => { setCookingMode(true); setCurrentStep(0); }}
-                            className="primary-btn"
-                            style={{marginLeft: '10px', padding: '10px 20px'}}
-                        >
-                            👨‍🍳 Start Cooking Mode
-                        </button>
+                            <button 
+                                onClick={() => { setCookingMode(true); setCurrentStep(0); }}
+                                className="primary-btn"
+                                style={{padding: '10px 20px'}}
+                            >
+                                👨‍🍳 Start Cooking Mode
+                            </button>
+                        </div>
                     </div>
 
                     <div>
@@ -343,7 +342,7 @@ const Recipe = ({ user, onUpdate }) => {
                             onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
                             disabled={currentStep === 0}
                             className="primary-btn"
-                            style={{opacity: currentStep === 0 ? 0.5 : 1}}
+                            style={{opacity: currentStep === 0 ? 0.5 : 1, cursor: currentStep === 0 ? 'not-allowed' : 'pointer'}}
                         >
                             ← Previous
                         </button>
@@ -357,7 +356,10 @@ const Recipe = ({ user, onUpdate }) => {
                             </button>
                         ) : (
                             <button 
-                                onClick={() => { setCookingMode(false); alert('🎉 Recipe completed!'); }}
+                                onClick={() => { 
+                                    setCookingMode(false); 
+                                    alert('🎉 Recipe completed! Great job!'); 
+                                }}
                                 className="primary-btn"
                             >
                                 ✅ Finish
@@ -370,7 +372,6 @@ const Recipe = ({ user, onUpdate }) => {
                     onClick={() => setCookingMode(false)}
                     style={{
                         ...chipStyle,
-                        marginTop: '20px',
                         padding: '10px 20px',
                         display: 'block',
                         margin: '20px auto 0'
@@ -385,7 +386,7 @@ const Recipe = ({ user, onUpdate }) => {
     // Main Recipe Browser
     return (
         <div className="glass-panel fade-in">
-            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', flexWrap: 'wrap', gap: '15px'}}>
                 <h2 style={{color: '#00f2ff', margin: 0}}>🍳 Recipe Library</h2>
                 
                 <div style={{display: 'flex', gap: '10px'}}>
@@ -397,9 +398,20 @@ const Recipe = ({ user, onUpdate }) => {
                         All Recipes
                     </button>
                     <button 
-                        onClick={() => setView('favorites')}
+                        onClick={() => {
+                            if (!user?.email) {
+                                alert('Please log in to view favorites');
+                                return;
+                            }
+                            setView('favorites');
+                        }}
                         className={view === 'favorites' ? 'primary-btn' : ''}
-                        style={{...chipStyle, padding: '8px 16px', background: view === 'favorites' ? undefined : 'rgba(255,255,255,0.1)'}}
+                        style={{
+                            ...chipStyle, 
+                            padding: '8px 16px', 
+                            background: view === 'favorites' ? undefined : 'rgba(255,255,255,0.1)',
+                            opacity: !user?.email ? 0.5 : 1
+                        }}
                     >
                         ❤️ Favorites
                     </button>
@@ -420,13 +432,13 @@ const Recipe = ({ user, onUpdate }) => {
                         onClick={() => searchAndFetchRecipes(filters.search)}
                         className="primary-btn"
                         disabled={searchLoading}
-                        style={{padding: '10px 20px', whiteSpace: 'nowrap'}}
+                        style={{padding: '10px 20px', whiteSpace: 'nowrap', opacity: searchLoading ? 0.7 : 1}}
                     >
                         {searchLoading ? '🔄 Searching...' : '🔍 Search Online'}
                     </button>
                 </div>
 
-                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px'}}>
+                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', marginBottom: '15px'}}>
                     <input 
                         type="number"
                         placeholder="Max Calories"
@@ -474,16 +486,14 @@ const Recipe = ({ user, onUpdate }) => {
                     </select>
                 </div>
 
-                <div style={{marginTop: '15px', display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
-                    <button 
-                        onClick={() => searchAndFetchRecipes()}
-                        className="primary-btn"
-                        disabled={searchLoading}
-                        style={{padding: '8px 16px', fontSize: '0.9rem'}}
-                    >
-                        🍽️ Load Popular Recipes
-                    </button>
-                </div>
+                <button 
+                    onClick={() => searchAndFetchRecipes()}
+                    className="primary-btn"
+                    disabled={searchLoading}
+                    style={{padding: '8px 16px', fontSize: '0.9rem', opacity: searchLoading ? 0.7 : 1}}
+                >
+                    🍽️ Load Popular Recipes
+                </button>
             </div>
 
             {/* Recipe Grid */}
@@ -504,72 +514,78 @@ const Recipe = ({ user, onUpdate }) => {
                 </div>
             ) : (
                 <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px'}}>
-                    {filteredRecipes.map(recipe => (
-                        <div 
-                            key={recipe._id}
-                            onClick={() => setSelectedRecipe(recipe)}
-                            style={{
-                                background: 'rgba(255,255,255,0.05)',
-                                borderRadius: '15px',
-                                overflow: 'hidden',
-                                cursor: 'pointer',
-                                transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                                border: '1px solid rgba(255,255,255,0.1)'
-                            }}
-                            onMouseEnter={e => {
-                                e.currentTarget.style.transform = 'translateY(-5px)';
-                                e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,242,255,0.3)';
-                            }}
-                            onMouseLeave={e => {
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = 'none';
-                            }}
-                        >
-                            {recipe.image && (
-                                <img 
-                                    src={recipe.image} 
-                                    alt={recipe.title}
-                                    style={{width: '100%', height: '200px', objectFit: 'cover'}}
-                                />
-                            )}
-                            
-                            <div style={{padding: '20px'}}>
-                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px'}}>
-                                    <h3 style={{color: '#00f2ff', margin: 0, flex: 1}}>{recipe.title}</h3>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            const recipeId = recipe._id || recipe.externalId;
-                                            console.log('Toggling favorite for:', recipeId, 'User:', user?.email);
-                                            toggleFavorite(recipeId);
-                                        }}
-                                        style={{
-                                            background: 'none',
-                                            border: 'none',
-                                            fontSize: '1.5rem',
-                                            cursor: 'pointer',
-                                            padding: '0',
-                                            marginLeft: '10px'
-                                        }}
-                                    >
-                                        {favorites.includes(recipe._id || recipe.externalId) ? '❤️' : '🤍'}
-                                    </button>
-                                </div>
-                                
-                                <p style={{color: '#aaa', fontSize: '0.9rem', marginBottom: '15px', lineHeight: '1.4'}}>
-                                    {recipe.description?.substring(0, 100)}{recipe.description?.length > 100 ? '...' : ''}
-                                </p>
-                                
-                                <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
-                                    <span style={smallBadgeStyle}>🔥 {recipe.calories} cal</span>
-                                    <span style={smallBadgeStyle}>⏱️ {(recipe.prepTime || 0) + (recipe.cookTime || 0)} min</span>
-                                    {recipe.dietType !== 'None' && (
-                                        <span style={smallBadgeStyle}>🥗 {recipe.dietType}</span>
+                    {filteredRecipes.map(recipe => {
+                        const isFavorited = favorites.includes(recipe._id);
+                        
+                        return (
+                            <div 
+                                key={recipe._id}
+                                style={{
+                                    background: 'rgba(255,255,255,0.05)',
+                                    borderRadius: '15px',
+                                    overflow: 'hidden',
+                                    cursor: 'pointer',
+                                    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                                onMouseEnter={e => {
+                                    e.currentTarget.style.transform = 'translateY(-5px)';
+                                    e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,242,255,0.3)';
+                                }}
+                                onMouseLeave={e => {
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = 'none';
+                                }}
+                            >
+                                <div onClick={() => setSelectedRecipe(recipe)}>
+                                    {recipe.image && (
+                                        <img 
+                                            src={recipe.image} 
+                                            alt={recipe.title}
+                                            style={{width: '100%', height: '200px', objectFit: 'cover'}}
+                                        />
                                     )}
+                                    
+                                    <div style={{padding: '20px'}}>
+                                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px'}}>
+                                            <h3 style={{color: '#00f2ff', margin: 0, flex: 1}}>{recipe.title}</h3>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleFavorite(recipe);
+                                                }}
+                                                disabled={!user?.email}
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    fontSize: '1.5rem',
+                                                    cursor: user?.email ? 'pointer' : 'not-allowed',
+                                                    padding: '0',
+                                                    marginLeft: '10px',
+                                                    opacity: !user?.email ? 0.5 : 1
+                                                }}
+                                                title={!user?.email ? 'Login to add favorites' : ''}
+                                            >
+                                                {isFavorited ? '❤️' : '🤍'}
+                                            </button>
+                                        </div>
+                                        
+                                        <p style={{color: '#aaa', fontSize: '0.9rem', marginBottom: '15px', lineHeight: '1.4'}}>
+                                            {recipe.description?.substring(0, 100)}{recipe.description?.length > 100 ? '...' : ''}
+                                        </p>
+                                        
+                                        <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
+                                            <span style={smallBadgeStyle}>🔥 {recipe.calories} cal</span>
+                                            <span style={smallBadgeStyle}>⏱️ {(recipe.prepTime || 0) + (recipe.cookTime || 0)} min</span>
+                                            {recipe.dietType !== 'None' && (
+                                                <span style={smallBadgeStyle}>🥗 {recipe.dietType}</span>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>
@@ -594,7 +610,8 @@ const chipStyle = {
     padding: '5px 10px',
     borderRadius: '20px',
     cursor: 'pointer',
-    fontSize: '0.8rem'
+    fontSize: '0.8rem',
+    transition: 'all 0.3s ease'
 };
 
 const badgeStyle = {
