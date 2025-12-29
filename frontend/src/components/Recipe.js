@@ -3,12 +3,12 @@ import { useState, useEffect } from 'react';
 const Recipe = ({ user, onUpdate }) => {
     const [recipes, setRecipes] = useState([]);
     const [favorites, setFavorites] = useState([]);
-    const [userRecipes, setUserRecipes] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedRecipe, setSelectedRecipe] = useState(null);
     const [cookingMode, setCookingMode] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
-    const [view, setView] = useState('browse'); // browse, favorites, myrecipes, add
+    const [view, setView] = useState('browse'); // browse, favorites, search
+    const [searchLoading, setSearchLoading] = useState(false);
     
     // Filter State
     const [filters, setFilters] = useState({
@@ -19,94 +19,125 @@ const Recipe = ({ user, onUpdate }) => {
         dietType: 'All'
     });
 
-    // Add Recipe Form
-    const [newRecipe, setNewRecipe] = useState({
-        title: '',
-        description: '',
-        calories: '',
-        prepTime: '',
-        cookTime: '',
-        cuisine: 'American',
-        dietType: 'None',
-        servings: '',
-        ingredients: '',
-        instructions: '',
-        image: ''
-    });
-
-    // Fetch recipes from TheMealDB (Free API - No Key Required!)
+    // Fetch recipes from backend database
     const fetchRecipes = async () => {
         setLoading(true);
         try {
-            // First try to fetch from your backend
-            const backendRes = await fetch('http://localhost:5000/api/recipes');
-            let backendRecipes = [];
-            
-            if (backendRes.ok) {
-                backendRecipes = await backendRes.json();
+            const res = await fetch('http://localhost:5000/api/recipes');
+            if (res.ok) {
+                const data = await res.json();
+                setRecipes(data);
             }
-
-            // Fetch from TheMealDB API (free, no key needed)
-            const categories = ['Chicken', 'Beef', 'Seafood', 'Vegetarian', 'Pasta', 'Dessert'];
-            const apiRecipes = [];
-
-            for (const category of categories) {
-                try {
-                    const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${category}`);
-                    const data = await response.json();
-                    
-                    if (data.meals) {
-                        // Get first 3 meals from each category
-                        const categoryMeals = data.meals.slice(0, 3);
-                        
-                        for (const meal of categoryMeals) {
-                            // Fetch detailed info for each meal
-                            const detailRes = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`);
-                            const detailData = await detailRes.json();
-                            
-                            if (detailData.meals && detailData.meals[0]) {
-                                const m = detailData.meals[0];
-                                
-                                // Extract ingredients
-                                const ingredients = [];
-                                for (let i = 1; i <= 20; i++) {
-                                    const ingredient = m[`strIngredient${i}`];
-                                    const measure = m[`strMeasure${i}`];
-                                    if (ingredient && ingredient.trim()) {
-                                        ingredients.push(`${measure} ${ingredient}`);
-                                    }
-                                }
-
-                                apiRecipes.push({
-                                    _id: m.idMeal,
-                                    title: m.strMeal,
-                                    description: m.strMeal,
-                                    calories: Math.floor(Math.random() * (600 - 200) + 200), // Estimated
-                                    prepTime: 15,
-                                    cookTime: 30,
-                                    cuisine: m.strArea || 'International',
-                                    dietType: m.strCategory === 'Vegetarian' ? 'Vegetarian' : 'None',
-                                    servings: 4,
-                                    ingredients: ingredients.join('\n'),
-                                    instructions: m.strInstructions,
-                                    image: m.strMealThumb,
-                                    userSubmitted: false
-                                });
-                            }
-                        }
-                    }
-                } catch (err) {
-                    console.error(`Error fetching ${category}:`, err);
-                }
-            }
-
-            // Combine backend recipes with API recipes
-            setRecipes([...backendRecipes, ...apiRecipes]);
         } catch (err) {
             console.error('Failed to fetch recipes:', err);
         } finally {
             setLoading(false);
         }
+    };
+
+    // Search recipes from TheMealDB and save to database
+    const searchAndFetchRecipes = async (searchTerm = '') => {
+        setSearchLoading(true);
+        try {
+            let apiRecipes = [];
+
+            if (searchTerm.trim()) {
+                // Search by name
+                const searchRes = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${searchTerm}`);
+                const searchData = await searchRes.json();
+                
+                if (searchData.meals) {
+                    apiRecipes = searchData.meals.map(m => formatRecipe(m));
+                }
+            } else {
+                // Fetch random recipes from various categories
+                const categories = ['Chicken', 'Beef', 'Seafood', 'Vegetarian', 'Pasta', 'Dessert'];
+                
+                for (const category of categories) {
+                    try {
+                        const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${category}`);
+                        const data = await response.json();
+                        
+                        if (data.meals) {
+                            // Get first 3 meals from each category
+                            const categoryMeals = data.meals.slice(0, 3);
+                            
+                            for (const meal of categoryMeals) {
+                                const detailRes = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`);
+                                const detailData = await detailRes.json();
+                                
+                                if (detailData.meals && detailData.meals[0]) {
+                                    apiRecipes.push(formatRecipe(detailData.meals[0]));
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        console.error(`Error fetching ${category}:`, err);
+                    }
+                }
+            }
+
+            // Save fetched recipes to backend database
+            if (apiRecipes.length > 0) {
+                for (const recipe of apiRecipes) {
+                    try {
+                        // Check if recipe already exists
+                        const checkRes = await fetch(`http://localhost:5000/api/recipes/${recipe.externalId}`);
+                        
+                        if (!checkRes.ok) {
+                            // Recipe doesn't exist, add it
+                            await fetch('http://localhost:5000/api/recipes', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(recipe)
+                            });
+                        }
+                    } catch (err) {
+                        console.error('Failed to save recipe:', err);
+                    }
+                }
+                
+                // Refresh recipes from database
+                await fetchRecipes();
+            }
+
+            if (searchTerm.trim() && apiRecipes.length === 0) {
+                alert('No recipes found. Try a different search term.');
+            }
+        } catch (err) {
+            console.error('Failed to search recipes:', err);
+            alert('Failed to search recipes. Please try again.');
+        } finally {
+            setSearchLoading(false);
+        }
+    };
+
+    // Format recipe from TheMealDB API
+    const formatRecipe = (m) => {
+        const ingredients = [];
+        for (let i = 1; i <= 20; i++) {
+            const ingredient = m[`strIngredient${i}`];
+            const measure = m[`strMeasure${i}`];
+            if (ingredient && ingredient.trim()) {
+                ingredients.push(`${measure} ${ingredient}`.trim());
+            }
+        }
+
+        return {
+            externalId: m.idMeal,
+            title: m.strMeal,
+            description: m.strMeal,
+            calories: Math.floor(Math.random() * (600 - 200) + 200),
+            prepTime: 15,
+            cookTime: 30,
+            cuisine: m.strArea || 'International',
+            dietType: m.strCategory === 'Vegetarian' ? 'Vegetarian' : 'None',
+            servings: 4,
+            ingredients: ingredients.join('\n'),
+            instructions: m.strInstructions,
+            image: m.strMealThumb,
+            source: 'TheMealDB'
+        };
     };
 
     // Fetch user's favorites
@@ -123,29 +154,17 @@ const Recipe = ({ user, onUpdate }) => {
         }
     };
 
-    // Fetch user's submitted recipes
-    const fetchUserRecipes = async () => {
-        if (!user?.email) return;
-        try {
-            const res = await fetch(`http://localhost:5000/api/recipes/user?email=${user.email}`);
-            if (res.ok) {
-                const data = await res.json();
-                setUserRecipes(data);
-            }
-        } catch (err) {
-            console.error('Failed to fetch user recipes:', err);
-        }
-    };
-
     useEffect(() => {
         fetchRecipes();
         fetchFavorites();
-        fetchUserRecipes();
     }, [user]);
 
     // Toggle favorite
     const toggleFavorite = async (recipeId) => {
-        if (!user?.email) return;
+        if (!user?.email) {
+            alert('Please log in to save favorites');
+            return;
+        }
         
         const isFavorite = favorites.includes(recipeId);
         
@@ -171,45 +190,10 @@ const Recipe = ({ user, onUpdate }) => {
         }
     };
 
-    // Submit new recipe
-    const handleSubmitRecipe = async () => {
-        if (!user?.email || !newRecipe.title || !newRecipe.ingredients || !newRecipe.instructions) {
-            alert('Please fill in all required fields');
-            return;
-        }
-
-        try {
-            const res = await fetch('http://localhost:5000/api/recipes', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...newRecipe,
-                    userEmail: user.email,
-                    userSubmitted: true
-                })
-            });
-
-            if (res.ok) {
-                alert('✅ Recipe submitted successfully!');
-                setNewRecipe({
-                    title: '', description: '', calories: '', prepTime: '', cookTime: '',
-                    cuisine: 'American', dietType: 'None', servings: '', 
-                    ingredients: '', instructions: '', image: ''
-                });
-                fetchUserRecipes();
-                setView('myrecipes');
-            }
-        } catch (err) {
-            console.error('Failed to submit recipe:', err);
-        }
-    };
-
     // Filter recipes
     const getFilteredRecipes = () => {
         let filtered = view === 'favorites' 
             ? recipes.filter(r => favorites.includes(r._id))
-            : view === 'myrecipes'
-            ? userRecipes
             : recipes;
 
         if (filters.search) {
@@ -383,152 +367,6 @@ const Recipe = ({ user, onUpdate }) => {
         );
     }
 
-    // Add Recipe View
-    if (view === 'add') {
-        return (
-            <div className="glass-panel fade-in">
-                <button onClick={() => setView('browse')} className="primary-btn" style={{marginBottom: '20px'}}>
-                    ← Back to Recipes
-                </button>
-
-                <h2 style={{color: '#00f2ff', marginBottom: '30px'}}>📝 Submit Your Recipe</h2>
-
-                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px'}}>
-                    <div>
-                        <label style={labelStyle}>Recipe Title *</label>
-                        <input 
-                            placeholder="e.g., Grilled Chicken Salad"
-                            value={newRecipe.title}
-                            onChange={e => setNewRecipe({...newRecipe, title: e.target.value})}
-                            style={inputStyle}
-                        />
-                    </div>
-
-                    <div>
-                        <label style={labelStyle}>Image URL</label>
-                        <input 
-                            placeholder="https://..."
-                            value={newRecipe.image}
-                            onChange={e => setNewRecipe({...newRecipe, image: e.target.value})}
-                            style={inputStyle}
-                        />
-                    </div>
-
-                    <div style={{gridColumn: '1 / -1'}}>
-                        <label style={labelStyle}>Description</label>
-                        <input 
-                            placeholder="Brief description of your recipe"
-                            value={newRecipe.description}
-                            onChange={e => setNewRecipe({...newRecipe, description: e.target.value})}
-                            style={inputStyle}
-                        />
-                    </div>
-
-                    <div>
-                        <label style={labelStyle}>Calories</label>
-                        <input 
-                            type="number"
-                            placeholder="e.g., 350"
-                            value={newRecipe.calories}
-                            onChange={e => setNewRecipe({...newRecipe, calories: e.target.value})}
-                            style={inputStyle}
-                        />
-                    </div>
-
-                    <div>
-                        <label style={labelStyle}>Servings</label>
-                        <input 
-                            type="number"
-                            placeholder="e.g., 4"
-                            value={newRecipe.servings}
-                            onChange={e => setNewRecipe({...newRecipe, servings: e.target.value})}
-                            style={inputStyle}
-                        />
-                    </div>
-
-                    <div>
-                        <label style={labelStyle}>Prep Time (min)</label>
-                        <input 
-                            type="number"
-                            placeholder="e.g., 15"
-                            value={newRecipe.prepTime}
-                            onChange={e => setNewRecipe({...newRecipe, prepTime: e.target.value})}
-                            style={inputStyle}
-                        />
-                    </div>
-
-                    <div>
-                        <label style={labelStyle}>Cook Time (min)</label>
-                        <input 
-                            type="number"
-                            placeholder="e.g., 30"
-                            value={newRecipe.cookTime}
-                            onChange={e => setNewRecipe({...newRecipe, cookTime: e.target.value})}
-                            style={inputStyle}
-                        />
-                    </div>
-
-                    <div>
-                        <label style={labelStyle}>Cuisine</label>
-                        <select 
-                            value={newRecipe.cuisine}
-                            onChange={e => setNewRecipe({...newRecipe, cuisine: e.target.value})}
-                            style={inputStyle}
-                        >
-                            <option>American</option>
-                            <option>Italian</option>
-                            <option>Mexican</option>
-                            <option>Asian</option>
-                            <option>Mediterranean</option>
-                            <option>Indian</option>
-                            <option>Other</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style={labelStyle}>Diet Type</label>
-                        <select 
-                            value={newRecipe.dietType}
-                            onChange={e => setNewRecipe({...newRecipe, dietType: e.target.value})}
-                            style={inputStyle}
-                        >
-                            <option>None</option>
-                            <option>Vegetarian</option>
-                            <option>Vegan</option>
-                            <option>Keto</option>
-                            <option>Paleo</option>
-                            <option>Gluten-Free</option>
-                        </select>
-                    </div>
-
-                    <div style={{gridColumn: '1 / -1'}}>
-                        <label style={labelStyle}>Ingredients * (one per line)</label>
-                        <textarea 
-                            placeholder="1 cup rice&#10;2 chicken breasts&#10;1 tbsp olive oil"
-                            value={newRecipe.ingredients}
-                            onChange={e => setNewRecipe({...newRecipe, ingredients: e.target.value})}
-                            style={{...inputStyle, minHeight: '150px', resize: 'vertical'}}
-                        />
-                    </div>
-
-                    <div style={{gridColumn: '1 / -1'}}>
-                        <label style={labelStyle}>Instructions * (one step per line)</label>
-                        <textarea 
-                            placeholder="1. Preheat oven to 350°F&#10;2. Season chicken with salt and pepper&#10;3. Bake for 25 minutes"
-                            value={newRecipe.instructions}
-                            onChange={e => setNewRecipe({...newRecipe, instructions: e.target.value})}
-                            style={{...inputStyle, minHeight: '200px', resize: 'vertical'}}
-                        />
-                    </div>
-                </div>
-
-                <button onClick={handleSubmitRecipe} className="primary-btn" style={{width: '100%', marginTop: '20px'}}>
-                    Submit Recipe
-                </button>
-            </div>
-        );
-    }
-
     // Main Recipe Browser
     return (
         <div className="glass-panel fade-in">
@@ -550,33 +388,30 @@ const Recipe = ({ user, onUpdate }) => {
                     >
                         ❤️ Favorites
                     </button>
-                    <button 
-                        onClick={() => setView('myrecipes')}
-                        className={view === 'myrecipes' ? 'primary-btn' : ''}
-                        style={{...chipStyle, padding: '8px 16px', background: view === 'myrecipes' ? undefined : 'rgba(255,255,255,0.1)'}}
-                    >
-                        My Recipes
-                    </button>
-                    <button 
-                        onClick={() => setView('add')}
-                        className="primary-btn"
-                        style={{padding: '8px 16px'}}
-                    >
-                        + Add Recipe
-                    </button>
                 </div>
             </div>
 
-            {/* Filters */}
+            {/* Search Box */}
             <div style={{background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '15px', marginBottom: '20px'}}>
-                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px'}}>
+                <div style={{display: 'flex', gap: '10px', marginBottom: '15px'}}>
                     <input 
-                        placeholder="🔍 Search recipes..."
+                        placeholder="🔍 Search recipes online (e.g., 'chicken curry', 'pasta')"
                         value={filters.search}
                         onChange={e => setFilters({...filters, search: e.target.value})}
-                        style={inputStyle}
+                        onKeyPress={e => e.key === 'Enter' && searchAndFetchRecipes(filters.search)}
+                        style={{...inputStyle, flex: 1}}
                     />
-                    
+                    <button 
+                        onClick={() => searchAndFetchRecipes(filters.search)}
+                        className="primary-btn"
+                        disabled={searchLoading}
+                        style={{padding: '10px 20px', whiteSpace: 'nowrap'}}
+                    >
+                        {searchLoading ? '🔄 Searching...' : '🔍 Search Online'}
+                    </button>
+                </div>
+
+                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px'}}>
                     <input 
                         type="number"
                         placeholder="Max Calories"
@@ -600,11 +435,14 @@ const Recipe = ({ user, onUpdate }) => {
                     >
                         <option>All</option>
                         <option>American</option>
+                        <option>British</option>
                         <option>Italian</option>
                         <option>Mexican</option>
-                        <option>Asian</option>
-                        <option>Mediterranean</option>
+                        <option>Chinese</option>
                         <option>Indian</option>
+                        <option>French</option>
+                        <option>Thai</option>
+                        <option>Japanese</option>
                     </select>
                     
                     <select 
@@ -620,14 +458,34 @@ const Recipe = ({ user, onUpdate }) => {
                         <option>Gluten-Free</option>
                     </select>
                 </div>
+
+                <div style={{marginTop: '15px', display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
+                    <button 
+                        onClick={() => searchAndFetchRecipes()}
+                        className="primary-btn"
+                        disabled={searchLoading}
+                        style={{padding: '8px 16px', fontSize: '0.9rem'}}
+                    >
+                        🍽️ Load Popular Recipes
+                    </button>
+                </div>
             </div>
 
             {/* Recipe Grid */}
-            {loading ? (
-                <div style={{textAlign: 'center', color: '#aaa', padding: '40px'}}>Loading recipes...</div>
+            {loading || searchLoading ? (
+                <div style={{textAlign: 'center', color: '#aaa', padding: '40px'}}>
+                    {searchLoading ? '🔍 Searching recipes online...' : 'Loading recipes...'}
+                </div>
             ) : filteredRecipes.length === 0 ? (
                 <div style={{textAlign: 'center', color: '#aaa', padding: '40px'}}>
-                    No recipes found. Try adjusting your filters.
+                    <p style={{fontSize: '1.2rem', marginBottom: '20px'}}>No recipes found.</p>
+                    <p style={{marginBottom: '20px'}}>Try searching for recipes online or adjust your filters.</p>
+                    <button 
+                        onClick={() => searchAndFetchRecipes()}
+                        className="primary-btn"
+                    >
+                        🍽️ Load Popular Recipes
+                    </button>
                 </div>
             ) : (
                 <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px'}}>
@@ -710,13 +568,6 @@ const inputStyle = {
     background: 'rgba(0,0,0,0.3)',
     color: 'white',
     boxSizing: 'border-box'
-};
-
-const labelStyle = {
-    display: 'block',
-    color: '#aaa',
-    marginBottom: '8px',
-    fontSize: '0.9rem'
 };
 
 const chipStyle = {
