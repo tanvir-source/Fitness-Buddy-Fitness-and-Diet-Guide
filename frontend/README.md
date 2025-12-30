@@ -68,3 +68,21 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+---
+
+## Water Log (added feature)
+
+- A new `Water` section is available in the sidebar (💧). It provides:
+  - Quick add buttons: 500 ml, 1L, 1.5L, 2L
+  - Visual bottle fill animation showing percentage of goal
+  - Hydration reminders (browser notifications)
+  - Hydration streak tracking and recent 14-day summary
+
+API endpoints used:
+- `POST /api/water` to add entries
+- `GET /api/water/total/:date?email=...` to get daily totals
+- `GET /api/water/streaks?email=...` to get streaks and recent history
+- `GET /api/water/goal?email=...` to get recommended daily goal (profile or weight-based)
+
+

@@ -16,4 +16,4 @@ const recipeSchema = new mongoose.Schema({
     userSubmitted: { type: Boolean, default: false }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Recipe', recipeSchema);
+module.exports = mongoose.models.Recipe || mongoose.model('Recipe', recipeSchema);

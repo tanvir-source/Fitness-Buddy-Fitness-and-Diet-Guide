@@ -1,9 +1,29 @@
 import { useState, useEffect } from 'react';
+import API_BASE_URL from '../config';
 
 const Home = ({ user }) => {
     // 1. State for Time Range
     const [viewMode, setViewMode] = useState('daily'); // 'daily', 'monthly', 'yearly'
     const [stats, setStats] = useState({ eaten: 0, burned: 0, workoutTime: 0, weight: 0 });
+    const [hydration, setHydration] = useState({ total: 0, goal: 2000, percent: 0, completed: false });
+
+    const fetchHydration = async () => {
+        if (!user?.email) return;
+        try {
+            const today = new Date().toISOString().slice(0,10);
+            const [totalRes, goalRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/api/water/total/${today}?email=${user.email}`),
+                fetch(`${API_BASE_URL}/api/water/goal?email=${user.email}`)
+            ]);
+            const totalData = await totalRes.json();
+            const goalData = await goalRes.json();
+            const total = totalData.total || 0;
+            const goal = goalData.recommended_ml || 2000;
+            const percent = Math.min(100, Math.round((total/goal)*100));
+            setHydration({ total, goal, percent, completed: total >= goal });
+        } catch (err) { console.error(err); }
+    };
+
 
     const fetchStats = async () => {
         if (!user?.email) return;
@@ -19,6 +39,7 @@ const Home = ({ user }) => {
 
     useEffect(() => {
         fetchStats();
+        fetchHydration();
     }, [user, viewMode]); // Re-fetch when viewMode changes
 
     return (
@@ -50,11 +71,12 @@ const Home = ({ user }) => {
             </div>
 
             {/* Stats Grid */}
-            <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px' }}>
+            <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px' }}>
                 <StatCard title="Calories Eaten" value={stats.eaten} target="/ 2000 Target" icon="🥗" color="#00f2ff" />
                 <StatCard title="Calories Burned" value={stats.burned} target="Great Job!" icon="🔥" color="#ff4757" />
                 <StatCard title="Workout Time" value={`${stats.workoutTime} m`} target="Minutes Active" icon="⏱️" color="#ffa502" />
                 <StatCard title="Current Weight" value={`${stats.weight} kg`} target="Latest Log" icon="⚖️" color="#a55eea" />
+                <HydrationCard hydration={hydration} />
             </div>
 
             {/* Motivation Box */}
@@ -75,6 +97,19 @@ const StatCard = ({ title, value, target, icon, color }) => (
         <h4 style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '5px' }}>{title.toUpperCase()}</h4>
         <h2 style={{ fontSize: '2rem', margin: '0' }}>{value}</h2>
         <small style={{ color: color }}>{target}</small>
+    </div>
+);
+
+const HydrationCard = ({ hydration }) => (
+    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '20px', borderRadius: '15px', textAlign: 'center', borderTop: '4px solid #00f2ff' }}>
+        <div style={{ fontSize: '2rem', marginBottom: '10px' }}>💧</div>
+        <h4 style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '5px' }}>HYDRATION</h4>
+        <h2 style={{ fontSize: '2rem', margin: '0' }}>{hydration.total} ml</h2>
+        <small style={{ color: '#00f2ff' }}>{hydration.goal} ml target</small>
+        <div style={{height:'8px', background:'rgba(255,255,255,0.05)', borderRadius:'8px', marginTop:'10px'}}>
+            <div style={{width:`${hydration.percent || 0}%`, height:'100%', background:'linear-gradient(90deg,#00f2ff,#00aaff)', borderRadius:'8px'}} />
+        </div>
+        {hydration.completed && <div style={{marginTop:'8px', color:'#7df7a6'}}>🎉 Goal reached</div>}
     </div>
 );
 

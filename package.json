@@ -1,5 +1,7 @@
 {
   "dependencies": {
+    "game-on": "concurrently \"npm run server --prefix Backend\" \"npm run start --prefix frontend\"",
+    "install-all": "npm install && npm install --prefix Backend && npm install --prefix frontend",
     "recharts": "^3.6.0"
   }
 }

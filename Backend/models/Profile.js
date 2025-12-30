@@ -7,13 +7,13 @@ const profileSchema = new mongoose.Schema({
   height: { type: Number }, // cm
   activityLevel: { type: String, default: 'Moderate' },
   goal: { type: String, default: 'Maintenance' },
-  
+
   // NEW FIELDS for future features
   targetWeight: { type: Number },
-  healthGoal: { 
-    type: String, 
-    enum: ['Weight Loss', 'Weight Gain', 'Muscle Building', 'Maintenance'], 
-    default: 'Maintenance' 
+  healthGoal: {
+    type: String,
+    enum: ['Weight Loss', 'Weight Gain', 'Muscle Building', 'Maintenance'],
+    default: 'Maintenance'
   },
   medicalConditions: { type: String, default: 'None' },
   dietaryRestrictions: { type: String, default: 'None' },
@@ -24,4 +24,4 @@ const profileSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('Profile', profileSchema);
+module.exports = mongoose.models.Profile || mongoose.model('Profile', profileSchema);

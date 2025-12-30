@@ -5,4 +5,4 @@ const favoriteSchema = new mongoose.Schema({
     recipeId: { type: String, required: true }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Favorite', favoriteSchema);
+module.exports = mongoose.models.Favorite || mongoose.model('Favorite', favoriteSchema);

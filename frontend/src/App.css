@@ -181,3 +181,41 @@ button.danger-btn {
   color: black;
   box-shadow: 0 0 20px var(--neon-blue);
 }
+
+/* Water drop animation used in WaterLog */
+.water-drop {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 24px;
+  background: radial-gradient(circle at 30% 30%, #bff 0%, #00f2ff 40%, #0077cc 100%);
+  border-radius: 50%;
+  box-shadow: 0 6px 18px rgba(0, 170, 255, 0.4);
+  animation: rise-drop 850ms ease-out forwards;
+}
+
+@keyframes rise-drop {
+  0% { transform: translate(-50%, 0) scale(0.6); opacity: 1; }
+  60% { transform: translate(-50%, -80px) scale(0.9); opacity: 0.8; }
+  100% { transform: translate(-50%, -120px) scale(1.1); opacity: 0; }
+}
+
+/* Goal complete badge */
+.goal-complete {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(0,242,255,0.06));
+  color: #00f2ff;
+  border-radius: 14px;
+  padding: 8px 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  box-shadow: 0 6px 20px rgba(0,242,255,0.08);
+  border: 1px solid rgba(0,242,255,0.08);
+  z-index: 4;
+}
+

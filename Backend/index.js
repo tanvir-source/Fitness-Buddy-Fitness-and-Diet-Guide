@@ -32,6 +32,7 @@ app.use('/api/food', foodRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/water', waterRoutes);
 // ... near the bottom where you have app.use(...)
 app.use('/api/stats', statsRoutes);
 app.use('/api', recipeRoutes);
