@@ -18,6 +18,7 @@ const statsRoutes = require('./routes/statsRoutes'); // New Controller
 // ... near the top with other imports
 const waterRoutes = require('./routes/waterRoutes');
 const recipeRoutes = require('./routes/recipeRoutes');
+const stepRoutes = require('./routes/stepRoutes');
 
 
 // --- DATABASE ---
@@ -36,6 +37,7 @@ app.use('/api/water', waterRoutes);
 // ... near the bottom where you have app.use(...)
 app.use('/api/stats', statsRoutes);
 app.use('/api', recipeRoutes);
+app.use('/api/steps', stepRoutes);
 
 // Manual Route for Stats (Since it's just one function)
 

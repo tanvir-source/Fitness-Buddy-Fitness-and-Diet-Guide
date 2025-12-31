@@ -219,16 +219,18 @@ const Recipe = ({ user, onUpdate }) => {
         }
     };
 
+    // ✅ FIXED: Changed userEmail to email in URL parameter
     const fetchFavorites = async () => {
         if (!user?.email) {
             setFavorites([]);
             return;
         }
         try {
-            const res = await fetch(`http://localhost:5000/api/recipes/favorites?userEmail=${user.email}`);
+            const res = await fetch(`http://localhost:5000/api/recipes/favorites?email=${user.email}`);
             if (res.ok) {
                 const data = await res.json();
-                setFavorites(data.map(f => f.recipeId));
+                // ✅ FIXED: Handle both field name formats
+                setFavorites(data.map(f => f.recipe_id || f.recipeId));
             }
         } catch (err) {
             console.error('Failed to fetch favorites:', err);
@@ -242,6 +244,7 @@ const Recipe = ({ user, onUpdate }) => {
         }
     }, [user?.email]);
 
+    // ✅ FIXED: Changed userEmail to user_email and recipeId to recipe_id
     const toggleFavorite = async (recipe) => {
         if (!user?.email) {
             alert('Please log in to save favorites');
@@ -261,8 +264,8 @@ const Recipe = ({ user, onUpdate }) => {
                 method: isFavorite ? 'DELETE' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    userEmail: user.email,
-                    recipeId: recipeId
+                    user_email: user.email,    // ✅ FIXED: Changed from userEmail
+                    recipe_id: recipeId         // ✅ FIXED: Changed from recipeId
                 })
             });
 

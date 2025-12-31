@@ -9,6 +9,8 @@ import Weight from './components/Weight';
 import Profile from './components/Profile';
 import Recipe from './components/Recipe';
 import WaterLog from './components/WaterLog';
+import BmiBmr from './components/BmiBmr';
+import Step from './components/Step';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -64,21 +66,36 @@ function App() {
     setRefreshTrigger(prev => prev + 1);
   };
 
-  // Load user from localStorage
+  // ✅ FIXED: Load user from localStorage with proper validation
   useEffect(() => {
     const savedUser = localStorage.getItem('fitnessUser');
-    if (savedUser) {
+    
+    if (savedUser && savedUser !== 'undefined' && savedUser !== 'null') {
       try {
-        setUser(JSON.parse(savedUser));
+        const parsedUser = JSON.parse(savedUser);
+        // Only set user if it has an email (valid user object)
+        if (parsedUser && parsedUser.email) {
+          setUser(parsedUser);
+        } else {
+          // Invalid user data, clear it
+          localStorage.removeItem('fitnessUser');
+          setUser(null);
+        }
       } catch (err) {
+        console.error('Error parsing user from localStorage:', err);
         localStorage.removeItem('fitnessUser');
+        setUser(null);
       }
+    } else {
+      // No valid user data
+      localStorage.removeItem('fitnessUser');
+      setUser(null);
     }
   }, []);
 
   // Save user to localStorage
   useEffect(() => {
-    if (user) {
+    if (user && user.email) {
       localStorage.setItem('fitnessUser', JSON.stringify(user));
     } else {
       localStorage.removeItem('fitnessUser');
@@ -103,12 +120,16 @@ function App() {
       } else {
         alert(data.message || 'Error');
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error(err);
+      alert('Connection error. Please check if backend is running.');
+    }
   };
 
   const handleLogout = () => {
     setUser(null);
     setIsLogin(true);
+    setCurrentView('dashboard');
     localStorage.removeItem('fitnessUser');
   };
 
@@ -222,7 +243,9 @@ function App() {
       case 'profile': return <Profile user={user} onUpdate={triggerRefresh} />;
       case 'food': return <Nutrition user={user} onUpdate={triggerRefresh} />;
       case 'activity': return <Fitness user={user} onUpdate={triggerRefresh} />;
+      case 'steps': return <Step user={user} onUpdate={triggerRefresh} />;
       case 'weight': return <Weight user={user} onUpdate={triggerRefresh} />;
+      case 'bmibmr': return <BmiBmr user={user} />;
       case 'recipe': return <Recipe user={user} onUpdate={triggerRefresh} />;
       case 'water': return <WaterLog user={user} onUpdate={triggerRefresh} />;
       case 'community': return <SocialAdmin user={user} />;
@@ -230,7 +253,7 @@ function App() {
     }
   };
 
-  // Login Screen
+  // Login Screen - ONLY shows when user is null
   if (!user) {
     return (
       <div className="bg-login" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -250,26 +273,51 @@ function App() {
     );
   }
 
-  // Main Layout
+  // Main Layout - ONLY shows when user exists
   return (
     <div className="bg-dashboard" style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
 
       {/* Sidebar */}
-      <div style={{ width: '200px', padding: '30px 20px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column' }}>
-        <h3 style={{ color: '#fff', marginBottom: '40px', textAlign: 'center', letterSpacing: '2px' }}>FIT<span style={{ color: '#00f2ff' }}>BUDDY</span></h3>
+      <div style={{ 
+          width: '200px', 
+          background: 'rgba(0,0,0,0.6)', 
+          backdropFilter: 'blur(10px)', 
+          display: 'flex', 
+          flexDirection: 'column',
+          height: '100vh'
+      }}>
+          {/* Header - Fixed at top */}
+          <div style={{ padding: '30px 20px 20px' }}>
+              <h3 style={{ color: '#fff', marginBottom: '0', textAlign: 'center', letterSpacing: '2px' }}>
+                  FIT<span style={{ color: '#00f2ff' }}>BUDDY</span>
+              </h3>
+          </div>
 
-        <NavIcon icon="🏠" label="Home" active={currentView === 'dashboard'} onClick={() => setCurrentView('dashboard')} />
-        <NavIcon icon="👤" label="Profile" active={currentView === 'profile'} onClick={() => setCurrentView('profile')} />
-        <NavIcon icon="⚖️" label="Weight" active={currentView === 'weight'} onClick={() => setCurrentView('weight')} />
-        <NavIcon icon="🥗" label="Nutrition" active={currentView === 'food'} onClick={() => setCurrentView('food')} />
-        <NavIcon icon="💪" label="Fitness" active={currentView === 'activity'} onClick={() => setCurrentView('activity')} />
-        <NavIcon icon="🍳" label="Recipe" active={currentView === 'recipe'} onClick={() => setCurrentView('recipe')} />
-        <NavIcon icon={<svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 2s6 5.5 6 9.5A6 6 0 0 1 6 11.5C6 7.5 12 2 12 2z" fill="#00f2ff" /></svg>} label="Water" active={currentView === 'water'} onClick={() => setCurrentView('water')} />
-        <NavIcon icon="�💬" label="Community" active={currentView === 'community'} onClick={() => setCurrentView('community')} />
+          {/* Navigation - Scrollable */}
+          <div style={{ 
+              flex: 1, 
+              overflowY: 'auto', 
+              padding: '0 20px',
+              paddingBottom: '20px'
+          }}>
+              <NavIcon icon="🏠" label="Home" active={currentView === 'dashboard'} onClick={() => setCurrentView('dashboard')} />
+              <NavIcon icon="👤" label="Profile" active={currentView === 'profile'} onClick={() => setCurrentView('profile')} />
+              <NavIcon icon="⚖️" label="Weight" active={currentView === 'weight'} onClick={() => setCurrentView('weight')} />
+              <NavIcon icon="📊" label="BMI/BMR" active={currentView === 'bmibmr'} onClick={() => setCurrentView('bmibmr')} />
+              <NavIcon icon="🥗" label="Nutrition" active={currentView === 'food'} onClick={() => setCurrentView('food')} />
+              <NavIcon icon="🍳" label="Recipe" active={currentView === 'recipe'} onClick={() => setCurrentView('recipe')} />
+              <NavIcon icon="💧" label="Water" active={currentView === 'water'} onClick={() => setCurrentView('water')} />
+              <NavIcon icon="💪" label="Fitness" active={currentView === 'activity'} onClick={() => setCurrentView('activity')} />
+              <NavIcon icon="👣" label="Steps" active={currentView === 'steps'} onClick={() => setCurrentView('steps')} />
+              <NavIcon icon="💬" label="Community" active={currentView === 'community'} onClick={() => setCurrentView('community')} />
+          </div>
 
-        <div style={{ marginTop: 'auto' }}>
-          <button onClick={handleLogout} className="danger-btn" style={{ width: '100%' }}>Logout</button>
-        </div>
+          {/* Logout Button - Fixed at bottom */}
+          <div style={{ padding: '20px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              <button onClick={handleLogout} className="danger-btn" style={{ width: '100%' }}>
+                  🚪 Logout
+              </button>
+          </div>
       </div>
 
       {/* Main Content */}
