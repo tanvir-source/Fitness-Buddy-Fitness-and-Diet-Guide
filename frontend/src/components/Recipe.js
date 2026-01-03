@@ -264,8 +264,8 @@ const Recipe = ({ user, onUpdate }) => {
                 method: isFavorite ? 'DELETE' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    user_email: user.email,    // ✅ FIXED: Changed from userEmail
-                    recipe_id: recipeId         // ✅ FIXED: Changed from recipeId
+                    userEmail: user.email,    // ✅ FIXED: Changed from userEmail
+                    recipeId: recipeId         // ✅ FIXED: Changed from recipeId
                 })
             });
 
