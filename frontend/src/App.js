@@ -12,6 +12,7 @@ import WaterLog from './components/WaterLog';
 import BmiBmr from './components/BmiBmr';
 import Step from './components/Step';
 import MealPlanner from './components/MealPlanner';
+import Report from './components/Report';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -250,6 +251,7 @@ function App() {
       case 'bmibmr': return <BmiBmr user={user} />;
       case 'recipe': return <Recipe user={user} onUpdate={triggerRefresh} />;
       case 'water': return <WaterLog user={user} onUpdate={triggerRefresh} />;
+      case 'report': return <Report user={user} />;
       case 'community': return <SocialAdmin user={user} />;
       default: return <Dashboard />;
     }
@@ -312,6 +314,7 @@ function App() {
               <NavIcon icon="💧" label="Water" active={currentView === 'water'} onClick={() => setCurrentView('water')} />
               <NavIcon icon="💪" label="Fitness" active={currentView === 'activity'} onClick={() => setCurrentView('activity')} />
               <NavIcon icon="👣" label="Steps" active={currentView === 'steps'} onClick={() => setCurrentView('steps')} />
+              <NavIcon icon="📊" label="Reports" active={currentView === 'report'} onClick={() => setCurrentView('report')} />
               <NavIcon icon="💬" label="Community" active={currentView === 'community'} onClick={() => setCurrentView('community')} />
           </div>
 
