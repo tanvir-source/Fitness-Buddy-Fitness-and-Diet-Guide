@@ -1,26 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { 
-    addActivity, 
-    getActivities, 
-    getActivityStats,
-    deleteActivity 
-} = require('../controllers/activityController');
+const { addActivity, getActivities } = require('../controllers/activityController');
 
-// GET /api/activity?email=user@email.com
-// Get all activities for a user
-router.get('/', getActivities);
-
-// GET /api/activity/stats?email=user@email.com
-// Get activity statistics
-router.get('/stats', getActivityStats);
-
-// POST /api/activity
-// Add new workout activity
+// Route: POST /api/activity (Add new workout)
 router.post('/', addActivity);
 
-// DELETE /api/activity/:id
-// Delete a specific activity
-router.delete('/:id', deleteActivity);
+// Route: GET /api/activity?email=... (Get history)
+router.get('/', getActivities);
 
 module.exports = router;
