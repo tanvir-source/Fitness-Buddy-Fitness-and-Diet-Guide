@@ -19,7 +19,7 @@ const statsRoutes = require('./routes/statsRoutes'); // New Controller
 const waterRoutes = require('./routes/waterRoutes');
 const recipeRoutes = require('./routes/recipeRoutes');
 const stepRoutes = require('./routes/stepRoutes');
-
+const mealPlanRoutes = require('./routes/mealplanRoutes');
 
 // --- DATABASE ---
 mongoose.connect(process.env.MONGO_URI)
@@ -38,6 +38,7 @@ app.use('/api/water', waterRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api', recipeRoutes);
 app.use('/api/steps', stepRoutes);
+app.use('/api/mealplan', mealPlanRoutes);
 
 // Manual Route for Stats (Since it's just one function)
 

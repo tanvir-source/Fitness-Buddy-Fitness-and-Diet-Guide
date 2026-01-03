@@ -11,6 +11,7 @@ import Recipe from './components/Recipe';
 import WaterLog from './components/WaterLog';
 import BmiBmr from './components/BmiBmr';
 import Step from './components/Step';
+import MealPlanner from './components/MealPlanner';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -242,6 +243,7 @@ function App() {
       case 'dashboard': return <Dashboard />;
       case 'profile': return <Profile user={user} onUpdate={triggerRefresh} />;
       case 'food': return <Nutrition user={user} onUpdate={triggerRefresh} />;
+      case 'mealplan': return <MealPlanner user={user} />;
       case 'activity': return <Fitness user={user} onUpdate={triggerRefresh} />;
       case 'steps': return <Step user={user} onUpdate={triggerRefresh} />;
       case 'weight': return <Weight user={user} onUpdate={triggerRefresh} />;
@@ -305,6 +307,7 @@ function App() {
               <NavIcon icon="⚖️" label="Weight" active={currentView === 'weight'} onClick={() => setCurrentView('weight')} />
               <NavIcon icon="📊" label="BMI/BMR" active={currentView === 'bmibmr'} onClick={() => setCurrentView('bmibmr')} />
               <NavIcon icon="🥗" label="Nutrition" active={currentView === 'food'} onClick={() => setCurrentView('food')} />
+              <NavIcon icon="🍽️" label="Meal Plans" active={currentView === 'mealplan'} onClick={() => setCurrentView('mealplan')} />
               <NavIcon icon="🍳" label="Recipe" active={currentView === 'recipe'} onClick={() => setCurrentView('recipe')} />
               <NavIcon icon="💧" label="Water" active={currentView === 'water'} onClick={() => setCurrentView('water')} />
               <NavIcon icon="💪" label="Fitness" active={currentView === 'activity'} onClick={() => setCurrentView('activity')} />
