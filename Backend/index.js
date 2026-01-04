@@ -9,18 +9,18 @@ app.use(express.json());
 
 // --- IMPORTS ---
 const userRoutes = require('./routes/userRoutes');
-const weightRoutes = require('./routes/weightRoutes'); // Fixed Version
+const weightRoutes = require('./routes/weightRoutes');
 const foodRoutes = require('./routes/foodRoutes');
 const activityRoutes = require('./routes/activityRoutes');
 const socialRoutes = require('./routes/socialRoutes');
-const profileRoutes = require('./routes/profileRoutes'); // You missed this in original
-const statsRoutes = require('./routes/statsRoutes'); // New Controller
-// ... near the top with other imports
+const profileRoutes = require('./routes/profileRoutes');
+const statsRoutes = require('./routes/statsRoutes');
 const waterRoutes = require('./routes/waterRoutes');
 const recipeRoutes = require('./routes/recipeRoutes');
 const stepRoutes = require('./routes/stepRoutes');
 const mealPlanRoutes = require('./routes/mealplanRoutes');
-const reportRoutes = require('./routes/reportRoutes')
+const reportRoutes = require('./routes/reportRoutes');
+const adminRoutes = require('./routes/adminRoutes'); // ✅ NEW
 
 // --- DATABASE ---
 mongoose.connect(process.env.MONGO_URI)
@@ -35,15 +35,21 @@ app.use('/api/activity', activityRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/water', waterRoutes);
-// ... near the bottom where you have app.use(...)
 app.use('/api/stats', statsRoutes);
 app.use('/api', recipeRoutes);
 app.use('/api/steps', stepRoutes);
 app.use('/api/mealplan', mealPlanRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/admin', adminRoutes); // ✅ NEW - Admin routes
 
-// Manual Route for Stats (Since it's just one function)
-
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Fitness Buddy API is running',
+    timestamp: new Date().toISOString()
+  });
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
 // Components
-import Nutrition from './components/Nutrition';
+import NutritionEnhanced from './components/NutritionEnhanced';
 import Fitness from './components/Fitness';
 import SocialAdmin from './components/SocialAdmin';
 import Weight from './components/Weight';
@@ -13,6 +13,8 @@ import BmiBmr from './components/BmiBmr';
 import Step from './components/Step';
 import MealPlanner from './components/MealPlanner';
 import Report from './components/Report';
+import AdminDashboard from './components/AdminDashboard';
+import ForgotPassword from './components/ForgotPassword';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -31,7 +33,7 @@ const NavIcon = ({ icon, label, active, onClick }) => (
     gap: '10px',
     transition: 'all 0.3s'
   }}>
-    <div style={{ fontSize: '1.4rem', fontFamily: "'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif" }}>{icon}</div>
+    <div style={{ fontSize: '1.4rem' }}>{icon}</div>
     <div style={{ fontSize: '0.9rem' }}>{label}</div>
   </div>
 );
@@ -57,29 +59,29 @@ const DashboardCard = ({ title, value, subtext, icon, color }) => (
 function App() {
   const [user, setUser] = useState(null);
   const [isLogin, setIsLogin] = useState(true);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [currentView, setCurrentView] = useState('dashboard');
   const [authData, setAuthData] = useState({ name: '', email: '', password: '' });
-
-  // ✅ ADD REFRESH TRIGGER
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // ✅ FUNCTION TO TRIGGER REFRESH
   const triggerRefresh = () => {
     setRefreshTrigger(prev => prev + 1);
   };
 
-  // ✅ FIXED: Load user from localStorage with proper validation
+  // Load user from localStorage with proper validation
   useEffect(() => {
     const savedUser = localStorage.getItem('fitnessUser');
     
     if (savedUser && savedUser !== 'undefined' && savedUser !== 'null') {
       try {
         const parsedUser = JSON.parse(savedUser);
-        // Only set user if it has an email (valid user object)
         if (parsedUser && parsedUser.email) {
           setUser(parsedUser);
+          // Set default view based on role
+          if (parsedUser.role === 'admin') {
+            setCurrentView('admin');
+          }
         } else {
-          // Invalid user data, clear it
           localStorage.removeItem('fitnessUser');
           setUser(null);
         }
@@ -89,7 +91,6 @@ function App() {
         setUser(null);
       }
     } else {
-      // No valid user data
       localStorage.removeItem('fitnessUser');
       setUser(null);
     }
@@ -115,12 +116,18 @@ function App() {
       if (res.ok) {
         if (isLogin) {
           setUser(data.user);
+          // Set initial view based on role
+          if (data.user.role === 'admin') {
+            setCurrentView('admin');
+          } else {
+            setCurrentView('dashboard');
+          }
         } else {
-          alert('Account created! Please login.');
+          alert('✅ Account created! Please login.');
           setIsLogin(true);
         }
       } else {
-        alert(data.message || 'Error');
+        alert(data.error || data.message || 'Error');
       }
     } catch (err) { 
       console.error(err);
@@ -135,7 +142,7 @@ function App() {
     localStorage.removeItem('fitnessUser');
   };
 
-  // Dashboard Component
+  // User Dashboard Component (for regular users)
   const Dashboard = () => {
     const [viewMode, setViewMode] = useState('daily');
     const [stats, setStats] = useState({
@@ -146,6 +153,7 @@ function App() {
       waterML: 0
     });
     const [loading, setLoading] = useState(true);
+    const [announcements, setAnnouncements] = useState([]);
 
     const fetchData = useCallback(async () => {
       if (!user?.email) return;
@@ -156,18 +164,20 @@ function App() {
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const dd = String(d.getDate()).padStart(2, '0');
         const today = `${yyyy}-${mm}-${dd}`;
-        const [foodRes, actRes, weightRes, waterRes] = await Promise.all([
+        const [foodRes, actRes, weightRes, waterRes, annRes] = await Promise.all([
           fetch(`${API_BASE_URL}/api/food?email=${user.email}`),
           fetch(`${API_BASE_URL}/api/activity?email=${user.email}`),
           fetch(`${API_BASE_URL}/api/weight?email=${user.email}`),
-          fetch(`${API_BASE_URL}/api/water/total/${today}?email=${user.email}`)
+          fetch(`${API_BASE_URL}/api/water/total/${today}?email=${user.email}`),
+          fetch(`${API_BASE_URL}/api/admin/announcements/active`)
         ]);
 
-        const [foodData, actData, weightData, waterData] = await Promise.all([
+        const [foodData, actData, weightData, waterData, annData] = await Promise.all([
           foodRes.json(),
           actRes.json(),
           weightRes.json(),
-          waterRes.json()
+          waterRes.json(),
+          annRes.ok ? annRes.json() : []
         ]);
 
         const totalFood = Array.isArray(foodData) ? foodData.reduce((acc, item) => acc + (Number(item.calories) || 0), 0) : 0;
@@ -177,6 +187,7 @@ function App() {
         const waterTotal = waterData.total || 0;
 
         setStats({ calsEaten: totalFood, calsBurned: totalBurn, workoutMins: totalMins, weight: latestWeight, waterML: waterTotal });
+        setAnnouncements(annData);
       } catch (err) {
         console.error("Error:", err);
       } finally {
@@ -192,8 +203,46 @@ function App() {
       return <div className="fade-in"><p style={{ textAlign: 'center', padding: '40px' }}>Loading...</p></div>;
     }
 
+    const getAnnouncementColor = (type) => {
+      switch(type) {
+        case 'urgent': return '#ff4444';
+        case 'warning': return '#ffa502';
+        case 'success': return '#00ff88';
+        default: return '#00f2ff';
+      }
+    };
+
     return (
       <div className="fade-in">
+        {/* Announcements */}
+        {announcements.length > 0 && (
+          <div style={{ marginBottom: '30px' }}>
+            {announcements.map(ann => (
+              <div key={ann._id} style={{
+                background: `rgba(${
+                  ann.type === 'urgent' ? '255, 68, 68' :
+                  ann.type === 'warning' ? '255, 165, 2' :
+                  ann.type === 'success' ? '0, 255, 136' : '0, 242, 255'
+                }, 0.1)`,
+                border: `1px solid ${getAnnouncementColor(ann.type)}`,
+                borderLeft: `4px solid ${getAnnouncementColor(ann.type)}`,
+                padding: '15px',
+                borderRadius: '10px',
+                marginBottom: '15px'
+              }}>
+                <h4 style={{ margin: '0 0 5px 0', color: getAnnouncementColor(ann.type) }}>
+                  {ann.type === 'urgent' && '🚨 '}
+                  {ann.type === 'warning' && '⚠️ '}
+                  {ann.type === 'success' && '✅ '}
+                  {ann.type === 'info' && 'ℹ️ '}
+                  {ann.title}
+                </h4>
+                <p style={{ margin: 0, color: '#fff' }}>{ann.message}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h2 style={{ margin: 0 }}>👋 Welcome back, <span style={{ color: '#00f2ff' }}>{user.name}</span></h2>
 
@@ -238,12 +287,18 @@ function App() {
     );
   };
 
-  // Render Content with triggerRefresh prop
+  // Render Content based on user role
   const renderContent = () => {
+    // Admin users only see admin dashboard
+    if (user?.role === 'admin') {
+      return <AdminDashboard user={user} />;
+    }
+
+    // Regular users see all features
     switch (currentView) {
       case 'dashboard': return <Dashboard />;
       case 'profile': return <Profile user={user} onUpdate={triggerRefresh} />;
-      case 'food': return <Nutrition user={user} onUpdate={triggerRefresh} />;
+      case 'food': return <NutritionEnhanced user={user} onUpdate={triggerRefresh} />;
       case 'mealplan': return <MealPlanner user={user} />;
       case 'activity': return <Fitness user={user} onUpdate={triggerRefresh} />;
       case 'steps': return <Step user={user} onUpdate={triggerRefresh} />;
@@ -257,8 +312,16 @@ function App() {
     }
   };
 
-  // Login Screen - ONLY shows when user is null
+  // Login/Signup Screen
   if (!user) {
+    if (showForgotPassword) {
+      return (
+        <div className="bg-login" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <ForgotPassword onBack={() => setShowForgotPassword(false)} />
+        </div>
+      );
+    }
+
     return (
       <div className="bg-login" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="glass-panel fade-in" style={{ padding: '40px', width: '350px' }}>
@@ -269,6 +332,25 @@ function App() {
             <input placeholder="Password" type="password" onChange={e => setAuthData({ ...authData, password: e.target.value })} required />
             <button type="submit" className="primary-btn">{isLogin ? 'Login' : 'Sign Up'}</button>
           </form>
+          
+          {isLogin && (
+            <p style={{ textAlign: 'center', marginTop: '15px' }}>
+              <button 
+                onClick={() => setShowForgotPassword(true)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#ffa502',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  fontSize: '0.9rem'
+                }}
+              >
+                Forgot Password?
+              </button>
+            </p>
+          )}
+          
           <p style={{ textAlign: 'center', marginTop: '20px', cursor: 'pointer', color: '#00f2ff' }} onClick={() => setIsLogin(!isLogin)}>
             {isLogin ? "New here? Create Account" : "Already have an account?"}
           </p>
@@ -277,53 +359,82 @@ function App() {
     );
   }
 
-  // Main Layout - ONLY shows when user exists
-  return (
-    <div className="bg-dashboard" style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-
-      {/* Sidebar */}
-      <div style={{ 
+  // Admin Layout (simplified - only admin dashboard)
+  if (user.role === 'admin') {
+    return (
+      <div className="bg-admin" style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+        {/* Simple Admin Sidebar */}
+        <div style={{ 
           width: '200px', 
-          background: 'rgba(0,0,0,0.6)', 
+          background: 'rgba(139, 0, 0, 0.3)', 
           backdropFilter: 'blur(10px)', 
           display: 'flex', 
           flexDirection: 'column',
           height: '100vh'
-      }}>
-          {/* Header - Fixed at top */}
-          <div style={{ padding: '30px 20px 20px' }}>
-              <h3 style={{ color: '#fff', marginBottom: '0', textAlign: 'center', letterSpacing: '2px' }}>
-                  FIT<span style={{ color: '#00f2ff' }}>BUDDY</span>
-              </h3>
+        }}>
+          <div style={{ padding: '30px 20px' }}>
+            <h3 style={{ color: '#ff4444', textAlign: 'center', letterSpacing: '2px' }}>
+              👑 ADMIN
+            </h3>
+          </div>
+          
+          <div style={{ flex: 1, padding: '0 20px' }}>
+            <NavIcon icon="🏠" label="Dashboard" active={true} onClick={() => {}} />
           </div>
 
-          {/* Navigation - Scrollable */}
-          <div style={{ 
-              flex: 1, 
-              overflowY: 'auto', 
-              padding: '0 20px',
-              paddingBottom: '20px'
-          }}>
-              <NavIcon icon="🏠" label="Home" active={currentView === 'dashboard'} onClick={() => setCurrentView('dashboard')} />
-              <NavIcon icon="👤" label="Profile" active={currentView === 'profile'} onClick={() => setCurrentView('profile')} />
-              <NavIcon icon="⚖️" label="Weight" active={currentView === 'weight'} onClick={() => setCurrentView('weight')} />
-              <NavIcon icon="📊" label="BMI/BMR" active={currentView === 'bmibmr'} onClick={() => setCurrentView('bmibmr')} />
-              <NavIcon icon="🥗" label="Nutrition" active={currentView === 'food'} onClick={() => setCurrentView('food')} />
-              <NavIcon icon="🍽️" label="Meal Plans" active={currentView === 'mealplan'} onClick={() => setCurrentView('mealplan')} />
-              <NavIcon icon="🍳" label="Recipe" active={currentView === 'recipe'} onClick={() => setCurrentView('recipe')} />
-              <NavIcon icon="💧" label="Water" active={currentView === 'water'} onClick={() => setCurrentView('water')} />
-              <NavIcon icon="💪" label="Fitness" active={currentView === 'activity'} onClick={() => setCurrentView('activity')} />
-              <NavIcon icon="👣" label="Steps" active={currentView === 'steps'} onClick={() => setCurrentView('steps')} />
-              <NavIcon icon={"📒\uFE0F"} label="Reports" active={currentView === 'report'} onClick={() => setCurrentView('report')} />
-              <NavIcon icon="💬" label="Community" active={currentView === 'community'} onClick={() => setCurrentView('community')} />
-          </div>
-
-          {/* Logout Button - Fixed at bottom */}
           <div style={{ padding: '20px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-              <button onClick={handleLogout} className="danger-btn" style={{ width: '100%' }}>
-                  🚪 Logout
-              </button>
+            <button onClick={handleLogout} className="danger-btn" style={{ width: '100%' }}>
+              🚪 Logout
+            </button>
           </div>
+        </div>
+
+        {/* Admin Content */}
+        <div style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
+          {renderContent()}
+        </div>
+      </div>
+    );
+  }
+
+  // Regular User Layout (full feature set)
+  return (
+    <div className="bg-dashboard" style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+      {/* Sidebar */}
+      <div style={{ 
+        width: '200px', 
+        background: 'rgba(0,0,0,0.6)', 
+        backdropFilter: 'blur(10px)', 
+        display: 'flex', 
+        flexDirection: 'column',
+        height: '100vh'
+      }}>
+        <div style={{ padding: '30px 20px 20px' }}>
+          <h3 style={{ color: '#fff', marginBottom: '0', textAlign: 'center', letterSpacing: '2px' }}>
+            FIT<span style={{ color: '#00f2ff' }}>BUDDY</span>
+          </h3>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px', paddingBottom: '20px' }}>
+          <NavIcon icon="🏠" label="Home" active={currentView === 'dashboard'} onClick={() => setCurrentView('dashboard')} />
+          <NavIcon icon="👤" label="Profile" active={currentView === 'profile'} onClick={() => setCurrentView('profile')} />
+          <NavIcon icon="⚖️" label="Weight" active={currentView === 'weight'} onClick={() => setCurrentView('weight')} />
+          <NavIcon icon="📊" label="BMI/BMR" active={currentView === 'bmibmr'} onClick={() => setCurrentView('bmibmr')} />
+          <NavIcon icon="🥗" label="Nutrition" active={currentView === 'food'} onClick={() => setCurrentView('food')} />
+          <NavIcon icon="🍽️" label="Meal Plans" active={currentView === 'mealplan'} onClick={() => setCurrentView('mealplan')} />
+          <NavIcon icon="🍳" label="Recipe" active={currentView === 'recipe'} onClick={() => setCurrentView('recipe')} />
+          <NavIcon icon="💧" label="Water" active={currentView === 'water'} onClick={() => setCurrentView('water')} />
+          <NavIcon icon="💪" label="Fitness" active={currentView === 'activity'} onClick={() => setCurrentView('activity')} />
+          <NavIcon icon="👣" label="Steps" active={currentView === 'steps'} onClick={() => setCurrentView('steps')} />
+          <NavIcon icon="📊" label="Reports" active={currentView === 'report'} onClick={() => setCurrentView('report')} />
+          <NavIcon icon="💬" label="Community" active={currentView === 'community'} onClick={() => setCurrentView('community')} />
+        </div>
+
+        <div style={{ padding: '20px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <button onClick={handleLogout} className="danger-btn" style={{ width: '100%' }}>
+            🚪 Logout
+          </button>
+        </div>
       </div>
 
       {/* Main Content */}

@@ -14,6 +14,17 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-}, { timestamps: true }); // This automatically adds 'createdAt' and 'updatedAt' times
+  // ✅ NEW: Admin Role
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user'
+  },
+  // ✅ NEW: Account Status
+  isActive: {
+    type: Boolean,
+    default: true
+  }
+}, { timestamps: true });
 
 module.exports = mongoose.models.User || mongoose.model('User', userSchema);
