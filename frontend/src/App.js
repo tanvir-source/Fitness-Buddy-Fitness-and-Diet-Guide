@@ -31,7 +31,7 @@ const NavIcon = ({ icon, label, active, onClick }) => (
     gap: '10px',
     transition: 'all 0.3s'
   }}>
-    <div style={{ fontSize: '1.4rem' }}>{icon}</div>
+    <div style={{ fontSize: '1.4rem', fontFamily: "'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif" }}>{icon}</div>
     <div style={{ fontSize: '0.9rem' }}>{label}</div>
   </div>
 );
@@ -314,7 +314,7 @@ function App() {
               <NavIcon icon="💧" label="Water" active={currentView === 'water'} onClick={() => setCurrentView('water')} />
               <NavIcon icon="💪" label="Fitness" active={currentView === 'activity'} onClick={() => setCurrentView('activity')} />
               <NavIcon icon="👣" label="Steps" active={currentView === 'steps'} onClick={() => setCurrentView('steps')} />
-              <NavIcon icon="📊" label="Reports" active={currentView === 'report'} onClick={() => setCurrentView('report')} />
+              <NavIcon icon={"📒\uFE0F"} label="Reports" active={currentView === 'report'} onClick={() => setCurrentView('report')} />
               <NavIcon icon="💬" label="Community" active={currentView === 'community'} onClick={() => setCurrentView('community')} />
           </div>
 

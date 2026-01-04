@@ -223,7 +223,9 @@ const Report = ({ user }) => {
 
     return (
         <div className="glass-panel fade-in">
-            <h2 style={{ color: '#00f2ff', marginBottom: '10px' }}>📊 Auto-Report Generator</h2>
+            <h2 style={{ color: '#00f2ff', marginBottom: '10px' }}>
+                <span style={{ fontFamily: 'Apple Color Emoji, "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol", sans-serif' }}>📝</span>{' '}Auto-Report Generator
+            </h2>
             <p style={{ color: '#ccc', marginBottom: '30px' }}>
                 Generate a comprehensive PDF report of your fitness journey
             </p>
@@ -283,7 +285,7 @@ const Report = ({ user }) => {
                         : 'linear-gradient(45deg, #00f2ff, #00aaff)'
                 }}
             >
-                <span>{generating ? '⏳ Generating...' : '📄 Download PDF Report'}</span>
+                <span style={{ fontFamily: 'Apple Color Emoji, "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol", sans-serif' }}>{generating ? '⏳ Generating...' : '📝 Download PDF Report'}</span>
             </button>
 
             {(displayTotalCals === 0 && displayWorkouts === 0) && (

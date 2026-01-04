@@ -525,7 +525,7 @@ const Home = ({ user }) => {
             <div style={{background: 'rgba(0,0,0,0.3)', padding: '20px', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.1)'}}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
                     <h3 style={{color: '#00f2ff', margin: 0}}>
-                        📋 Detailed Progress ({viewMode.charAt(0).toUpperCase() + viewMode.slice(1)})
+                        📈 Detailed Progress ({viewMode.charAt(0).toUpperCase() + viewMode.slice(1)})
                     </h3>
                     <button
                         onClick={() => setShowDetails(!showDetails)}
