@@ -13,8 +13,8 @@ import BmiBmr from './components/BmiBmr';
 import Step from './components/Step';
 import MealPlanner from './components/MealPlanner';
 import Report from './components/Report';
-import AdminDashboard from './components/AdminDashboard';
 import ForgotPassword from './components/ForgotPassword';
+import AdminPanel from './components/AdminPanel';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -269,8 +269,8 @@ function App() {
         </div>
 
         <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-          <DashboardCard title="Calories Eaten" value={stats.calsEaten} subtext="/ 2000 Target" icon="🥗" color="#00f2ff" />
-          <DashboardCard title="Calories Burned" value={stats.calsBurned} subtext="Great job!" icon="🔥" color="#ff4444" />
+          <DashboardCard title="Calories Eaten" value={stats.calsEaten} subtext="Calories Taken" icon="🥗" color="#00f2ff" />
+          <DashboardCard title="Calories Burned" value={stats.calsBurned} icon="🔥" subtext="Calories Burned!" color="#ff4444" />
           <DashboardCard title="Workout Time" value={`${stats.workoutMins} m`} subtext="Minutes Active" icon="⏱️" color="#ff9100" />
           <DashboardCard title="Current Weight" value={`${stats.weight} kg`} subtext="Latest Log" icon="⚖️" color="#a55eea" />
           <DashboardCard title="Water Consumed" value={`${stats.waterML} ml`} subtext="Hydration" icon="💧" color="#00aaff" />
@@ -291,7 +291,7 @@ function App() {
   const renderContent = () => {
     // Admin users only see admin dashboard
     if (user?.role === 'admin') {
-      return <AdminDashboard user={user} />;
+      return <AdminPanel user={user} />;
     }
 
     // Regular users see all features
@@ -308,6 +308,7 @@ function App() {
       case 'water': return <WaterLog user={user} onUpdate={triggerRefresh} />;
       case 'report': return <Report user={user} />;
       case 'community': return <SocialAdmin user={user} />;
+      case 'admin': return <AdminPanel user={user} />;
       default: return <Dashboard />;
     }
   };
@@ -428,6 +429,7 @@ function App() {
           <NavIcon icon="👣" label="Steps" active={currentView === 'steps'} onClick={() => setCurrentView('steps')} />
           <NavIcon icon="📊" label="Reports" active={currentView === 'report'} onClick={() => setCurrentView('report')} />
           <NavIcon icon="💬" label="Community" active={currentView === 'community'} onClick={() => setCurrentView('community')} />
+          <NavIcon icon="👑" label="Admin" active={currentView === 'admin'} onClick={() => setCurrentView('admin')} />
         </div>
 
         <div style={{ padding: '20px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>

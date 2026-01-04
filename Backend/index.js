@@ -20,7 +20,8 @@ const recipeRoutes = require('./routes/recipeRoutes');
 const stepRoutes = require('./routes/stepRoutes');
 const mealPlanRoutes = require('./routes/mealplanRoutes');
 const reportRoutes = require('./routes/reportRoutes');
-const adminRoutes = require('./routes/adminRoutes'); // ✅ NEW
+const adminRoutes = require('./routes/adminRoutes');
+const broadcastRoutes = require('./routes/broadcastRoutes');
 
 // --- DATABASE ---
 mongoose.connect(process.env.MONGO_URI)
@@ -40,7 +41,8 @@ app.use('/api', recipeRoutes);
 app.use('/api/steps', stepRoutes);
 app.use('/api/mealplan', mealPlanRoutes);
 app.use('/api/reports', reportRoutes);
-app.use('/api/admin', adminRoutes); // ✅ NEW - Admin routes
+app.use('/api/admin', adminRoutes);
+app.use('/api/admin', broadcastRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
