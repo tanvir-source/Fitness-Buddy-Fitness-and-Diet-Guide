@@ -20,11 +20,13 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'admin'],
     default: 'user'
   },
-  // ✅ NEW: Account Status
   isActive: {
     type: Boolean,
     default: true
-  }
+  },
+  // ✅ NEW: OTP for Password Reset
+  resetPasswordOtp: String,
+  resetPasswordExpires: Date
 }, { timestamps: true });
 
 module.exports = mongoose.models.User || mongoose.model('User', userSchema);

@@ -19,6 +19,8 @@ export default function WaterLog({ user, onUpdate }) {
   const [remindersOn, setRemindersOn] = useState(false);
   const [showDrop, setShowDrop] = useState(false);
   const [completed, setCompleted] = useState(false);
+  // Custom manual input (ml)
+  const [customAmount, setCustomAmount] = useState('');
   const reminderRef = useRef(null);
 
   const today = formatDate();
@@ -147,10 +149,37 @@ export default function WaterLog({ user, onUpdate }) {
         </div>
 
         <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center' }}>
             {[500, 1000, 1500, 2000].map(v => (
               <button key={v} className="primary-btn" onClick={() => addWater(v)}>{v >= 1000 ? `${v/1000}L` : `${v}ml`}</button>
             ))}
+
+            {/* Manual ml input */}
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: '10px' }}>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={customAmount}
+                onChange={e => setCustomAmount(e.target.value)}
+                placeholder="ml"
+                style={{ padding: '8px', width: '120px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)', background: 'transparent', color: '#fff' }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const val = Number(customAmount);
+                    if (!val || val <= 0) return alert('Enter a valid ml amount');
+                    addWater(val);
+                    setCustomAmount('');
+                  }
+                }}
+              />
+              <button className="primary-btn" onClick={() => {
+                const val = Number(customAmount);
+                if (!val || val <= 0) return alert('Enter a valid ml amount');
+                addWater(val);
+                setCustomAmount('');
+              }}>Add</button>
+            </div>
           </div>
 
           <div style={{ marginBottom: '10px' }}>

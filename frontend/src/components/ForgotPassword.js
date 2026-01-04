@@ -5,7 +5,7 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const ForgotPassword = ({ onBack }) => {
     const [step, setStep] = useState(1); // 1: Request, 2: Reset
     const [email, setEmail] = useState('');
-    const [token, setToken] = useState('');
+    const [otp, setOtp] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -28,13 +28,13 @@ const ForgotPassword = ({ onBack }) => {
 
             if (res.ok) {
                 setMessage(`✅ ${data.message}`);
-                
-                // In development, auto-fill token from response
+
+                // In development, auto-fill otp from response
                 if (data.dev_token) {
-                    setToken(data.dev_token);
-                    alert(`🔑 Development Mode: Your reset token is:\n\n${data.dev_token}\n\n(In production, this would be sent via email)`);
+                    setOtp(data.dev_token);
+                    alert(`🔑 Development Mode: Your reset OTP is:\n\n${data.dev_token}\n\n(In production, this would be sent via email)`);
                 }
-                
+
                 setStep(2);
             } else {
                 setMessage(`❌ ${data.error || 'Error sending reset email'}`);
@@ -50,7 +50,7 @@ const ForgotPassword = ({ onBack }) => {
     // Step 2: Reset Password
     const handleResetPassword = async (e) => {
         e.preventDefault();
-        
+
         if (newPassword !== confirmPassword) {
             setMessage('❌ Passwords do not match!');
             return;
@@ -68,7 +68,7 @@ const ForgotPassword = ({ onBack }) => {
             const res = await fetch(`${API_BASE_URL}/api/users/reset-password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, token, newPassword })
+                body: JSON.stringify({ email, otp, newPassword })
             });
 
             const data = await res.json();
@@ -95,9 +95,9 @@ const ForgotPassword = ({ onBack }) => {
                 🔐 Forgot Password
             </h2>
             <p style={{ textAlign: 'center', color: '#aaa', marginBottom: '30px', fontSize: '0.9rem' }}>
-                {step === 1 
-                    ? "Enter your email to receive a password reset token" 
-                    : "Enter the token and your new password"}
+                {step === 1
+                    ? "Enter your email to receive a password reset OTP"
+                    : "Enter the OTP and your new password"}
             </p>
 
             {message && (
@@ -105,8 +105,8 @@ const ForgotPassword = ({ onBack }) => {
                     padding: '15px',
                     borderRadius: '8px',
                     marginBottom: '20px',
-                    background: message.includes('✅') 
-                        ? 'rgba(0, 255, 136, 0.1)' 
+                    background: message.includes('✅')
+                        ? 'rgba(0, 255, 136, 0.1)'
                         : 'rgba(255, 68, 68, 0.1)',
                     border: `1px solid ${message.includes('✅') ? '#00ff88' : '#ff4444'}`,
                     color: message.includes('✅') ? '#00ff88' : '#ff4444',
@@ -118,7 +118,7 @@ const ForgotPassword = ({ onBack }) => {
 
             {step === 1 ? (
                 <form onSubmit={handleRequestReset} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                    <input 
+                    <input
                         type="email"
                         placeholder="Enter your email"
                         value={email}
@@ -127,9 +127,9 @@ const ForgotPassword = ({ onBack }) => {
                         disabled={loading}
                         style={{ width: '100%' }}
                     />
-                    
-                    <button 
-                        type="submit" 
+
+                    <button
+                        type="submit"
                         className="primary-btn"
                         disabled={loading}
                         style={{ width: '100%' }}
@@ -139,17 +139,17 @@ const ForgotPassword = ({ onBack }) => {
                 </form>
             ) : (
                 <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                    <input 
+                    <input
                         type="text"
-                        placeholder="Enter reset token"
-                        value={token}
-                        onChange={e => setToken(e.target.value)}
+                        placeholder="Enter 6-digit OTP"
+                        value={otp}
+                        onChange={e => setOtp(e.target.value)}
                         required
                         disabled={loading}
                         style={{ width: '100%' }}
                     />
-                    
-                    <input 
+
+                    <input
                         type="password"
                         placeholder="New password"
                         value={newPassword}
@@ -158,8 +158,8 @@ const ForgotPassword = ({ onBack }) => {
                         disabled={loading}
                         style={{ width: '100%' }}
                     />
-                    
-                    <input 
+
+                    <input
                         type="password"
                         placeholder="Confirm new password"
                         value={confirmPassword}
@@ -168,9 +168,9 @@ const ForgotPassword = ({ onBack }) => {
                         disabled={loading}
                         style={{ width: '100%' }}
                     />
-                    
-                    <button 
-                        type="submit" 
+
+                    <button
+                        type="submit"
                         className="primary-btn"
                         disabled={loading}
                         style={{ width: '100%' }}
@@ -181,7 +181,7 @@ const ForgotPassword = ({ onBack }) => {
             )}
 
             <div style={{ textAlign: 'center', marginTop: '20px' }}>
-                <button 
+                <button
                     onClick={onBack}
                     style={{
                         background: 'transparent',
@@ -206,8 +206,8 @@ const ForgotPassword = ({ onBack }) => {
                     color: '#ffa502',
                     borderLeft: '4px solid #ffa502'
                 }}>
-                    <strong>💡 Development Note:</strong> In production, the reset token would be sent to your email. 
-                    For testing, check the browser console or the token should have been auto-filled.
+                    <strong>💡 Development Note:</strong> In production, the reset OTP would be sent to your email.
+                    For testing, check the browser console or the OTP should have been auto-filled.
                 </div>
             )}
         </div>
