@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
 // Components
-import NutritionEnhanced from './components/NutritionEnhanced';
+import Nutrition from './components/Nutrition';
 import Fitness from './components/Fitness';
 import SocialAdmin from './components/SocialAdmin';
 import Weight from './components/Weight';
@@ -298,7 +298,7 @@ function App() {
     switch (currentView) {
       case 'dashboard': return <Dashboard />;
       case 'profile': return <Profile user={user} onUpdate={triggerRefresh} />;
-      case 'food': return <NutritionEnhanced user={user} onUpdate={triggerRefresh} />;
+      case 'food': return <Nutrition user={user} onUpdate={triggerRefresh} />;
       case 'mealplan': return <MealPlanner user={user} />;
       case 'activity': return <Fitness user={user} onUpdate={triggerRefresh} />;
       case 'steps': return <Step user={user} onUpdate={triggerRefresh} />;
