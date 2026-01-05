@@ -164,12 +164,13 @@ function App() {
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const dd = String(d.getDate()).padStart(2, '0');
         const today = `${yyyy}-${mm}-${dd}`;
+        
         const [foodRes, actRes, weightRes, waterRes, annRes] = await Promise.all([
           fetch(`${API_BASE_URL}/api/food?email=${user.email}`),
           fetch(`${API_BASE_URL}/api/activity?email=${user.email}`),
           fetch(`${API_BASE_URL}/api/weight?email=${user.email}`),
           fetch(`${API_BASE_URL}/api/water/total/${today}?email=${user.email}`),
-          fetch(`${API_BASE_URL}/api/admin/announcements/active`)
+          fetch(`${API_BASE_URL}/api/admin/announcements/active?email=${user.email}`)
         ]);
 
         const [foodData, actData, weightData, waterData, annData] = await Promise.all([
@@ -199,9 +200,34 @@ function App() {
       fetchData();
     }, [fetchData]);
 
-    if (loading) {
-      return <div className="fade-in"><p style={{ textAlign: 'center', padding: '40px' }}>Loading...</p></div>;
+const handleDismissAnnouncement = async (announcementId) => {
+    console.log('🔍 Dismiss clicked for announcement:', announcementId);
+    console.log('🔍 User email:', user.email);
+    console.log('🔍 API URL:', `${API_BASE_URL}/api/admin/announcements/${announcementId}/dismiss`);
+    
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/admin/announcements/${announcementId}/dismiss`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: user.email })
+        });
+
+        console.log('🔍 Response status:', res.status);
+        const data = await res.json();
+        console.log('🔍 Response data:', data);
+
+        if (res.ok) {
+            console.log('✅ Dismiss successful, filtering announcements');
+            setAnnouncements(prev => prev.filter(ann => ann.id !== announcementId));
+        } else {
+            console.error('❌ Dismiss failed:', data);
+            alert('Failed to dismiss announcement: ' + (data.error || 'Unknown error'));
+        }
+    } catch (err) {
+        console.error('❌ Dismiss error:', err);
+        alert('Error dismissing announcement: ' + err.message);
     }
+};
 
     const getAnnouncementColor = (type) => {
       switch(type) {
@@ -212,13 +238,17 @@ function App() {
       }
     };
 
+    if (loading) {
+      return <div className="fade-in"><p style={{ textAlign: 'center', padding: '40px' }}>Loading...</p></div>;
+    }
+
     return (
       <div className="fade-in">
-        {/* Announcements */}
+        {/* Announcements Section */}
         {announcements.length > 0 && (
           <div style={{ marginBottom: '30px' }}>
             {announcements.map(ann => (
-              <div key={ann._id} style={{
+              <div key={ann.id} style={{
                 background: `rgba(${
                   ann.type === 'urgent' ? '255, 68, 68' :
                   ann.type === 'warning' ? '255, 165, 2' :
@@ -228,16 +258,56 @@ function App() {
                 borderLeft: `4px solid ${getAnnouncementColor(ann.type)}`,
                 padding: '15px',
                 borderRadius: '10px',
-                marginBottom: '15px'
+                marginBottom: '15px',
+                position: 'relative'
               }}>
-                <h4 style={{ margin: '0 0 5px 0', color: getAnnouncementColor(ann.type) }}>
-                  {ann.type === 'urgent' && '🚨 '}
-                  {ann.type === 'warning' && '⚠️ '}
-                  {ann.type === 'success' && '✅ '}
-                  {ann.type === 'info' && 'ℹ️ '}
-                  {ann.title}
-                </h4>
-                <p style={{ margin: 0, color: '#fff' }}>{ann.message}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ margin: '0 0 5px 0', color: getAnnouncementColor(ann.type) }}>
+                      {ann.type === 'urgent' && '🚨 '}
+                      {ann.type === 'warning' && '⚠️ '}
+                      {ann.type === 'success' && '✅ '}
+                      {ann.type === 'info' && 'ℹ️ '}
+                      {ann.title}
+                    </h4>
+                    <p style={{ margin: 0, color: '#fff', lineHeight: '1.6' }}>{ann.message}</p>
+                    <p style={{ 
+                      margin: '8px 0 0 0', 
+                      fontSize: '0.75rem', 
+                      color: '#777' 
+                    }}>
+                      {new Date(ann.timestamp || ann.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                  
+                  {/* Dismiss Button */}
+                  <button
+                    onClick={() => handleDismissAnnouncement(ann.id)}
+                    style={{
+                      background: 'rgba(255,255,255,0.1)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      color: '#fff',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      fontWeight: 'bold',
+                      marginLeft: '15px',
+                      transition: 'all 0.3s',
+                      whiteSpace: 'nowrap'
+                    }}
+                    onMouseEnter={e => {
+                      e.target.style.background = 'rgba(255,255,255,0.2)';
+                      e.target.style.transform = 'scale(1.05)';
+                    }}
+                    onMouseLeave={e => {
+                      e.target.style.background = 'rgba(255,255,255,0.1)';
+                      e.target.style.transform = 'scale(1)';
+                    }}
+                  >
+                    ✕ Dismiss
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -287,14 +357,13 @@ function App() {
     );
   };
 
-  // Render Content based on user role
   const renderContent = () => {
     // Admin users only see admin dashboard
     if (user?.role === 'admin') {
       return <AdminPanel user={user} />;
     }
 
-    // Regular users see all features
+    // Regular users see all features EXCEPT admin
     switch (currentView) {
       case 'dashboard': return <Dashboard />;
       case 'profile': return <Profile user={user} onUpdate={triggerRefresh} />;
@@ -308,7 +377,21 @@ function App() {
       case 'water': return <WaterLog user={user} onUpdate={triggerRefresh} />;
       case 'report': return <Report user={user} />;
       case 'community': return <SocialAdmin user={user} />;
-      case 'admin': return <AdminPanel user={user} />;
+      case 'admin': 
+        // Prevent non-admins from accessing admin panel
+        return (
+          <div style={{
+            textAlign: 'center',
+            padding: '100px 20px',
+            background: 'rgba(255,0,0,0.1)',
+            borderRadius: '20px',
+            border: '2px solid #ff4444'
+          }}>
+            <div style={{ fontSize: '5rem', marginBottom: '20px' }}>🚫</div>
+            <h2 style={{ color: '#ff4444', marginBottom: '10px' }}>Access Denied</h2>
+            <p style={{ color: '#aaa' }}>You do not have admin privileges</p>
+          </div>
+        );
       default: return <Dashboard />;
     }
   };
@@ -417,20 +500,24 @@ function App() {
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px', paddingBottom: '20px' }}>
-          <NavIcon icon="🏠" label="Home" active={currentView === 'dashboard'} onClick={() => setCurrentView('dashboard')} />
-          <NavIcon icon="👤" label="Profile" active={currentView === 'profile'} onClick={() => setCurrentView('profile')} />
-          <NavIcon icon="⚖️" label="Weight" active={currentView === 'weight'} onClick={() => setCurrentView('weight')} />
-          <NavIcon icon="📊" label="BMI/BMR" active={currentView === 'bmibmr'} onClick={() => setCurrentView('bmibmr')} />
-          <NavIcon icon="🥗" label="Nutrition" active={currentView === 'food'} onClick={() => setCurrentView('food')} />
-          <NavIcon icon="🍽️" label="Meal Plans" active={currentView === 'mealplan'} onClick={() => setCurrentView('mealplan')} />
-          <NavIcon icon="🍳" label="Recipe" active={currentView === 'recipe'} onClick={() => setCurrentView('recipe')} />
-          <NavIcon icon="💧" label="Water" active={currentView === 'water'} onClick={() => setCurrentView('water')} />
-          <NavIcon icon="💪" label="Fitness" active={currentView === 'activity'} onClick={() => setCurrentView('activity')} />
-          <NavIcon icon="👣" label="Steps" active={currentView === 'steps'} onClick={() => setCurrentView('steps')} />
-          <NavIcon icon="📊" label="Reports" active={currentView === 'report'} onClick={() => setCurrentView('report')} />
-          <NavIcon icon="💬" label="Community" active={currentView === 'community'} onClick={() => setCurrentView('community')} />
-          <NavIcon icon="👑" label="Admin" active={currentView === 'admin'} onClick={() => setCurrentView('admin')} />
-        </div>
+            <NavIcon icon="🏠" label="Home" active={currentView === 'dashboard'} onClick={() => setCurrentView('dashboard')} />
+            <NavIcon icon="👤" label="Profile" active={currentView === 'profile'} onClick={() => setCurrentView('profile')} />
+            <NavIcon icon="⚖️" label="Weight" active={currentView === 'weight'} onClick={() => setCurrentView('weight')} />
+            <NavIcon icon="📊" label="BMI/BMR" active={currentView === 'bmibmr'} onClick={() => setCurrentView('bmibmr')} />
+            <NavIcon icon="🥗" label="Nutrition" active={currentView === 'food'} onClick={() => setCurrentView('food')} />
+            <NavIcon icon="🍽️" label="Meal Plans" active={currentView === 'mealplan'} onClick={() => setCurrentView('mealplan')} />
+            <NavIcon icon="🍳" label="Recipe" active={currentView === 'recipe'} onClick={() => setCurrentView('recipe')} />
+            <NavIcon icon="💧" label="Water" active={currentView === 'water'} onClick={() => setCurrentView('water')} />
+            <NavIcon icon="💪" label="Fitness" active={currentView === 'activity'} onClick={() => setCurrentView('activity')} />
+            <NavIcon icon="👣" label="Steps" active={currentView === 'steps'} onClick={() => setCurrentView('steps')} />
+            <NavIcon icon="📈" label="Reports" active={currentView === 'report'} onClick={() => setCurrentView('report')} />
+            <NavIcon icon="💬" label="Community" active={currentView === 'community'} onClick={() => setCurrentView('community')} />
+  
+  {/* Only show Admin option if user is admin */}
+  {user?.role === 'admin' && (
+    <NavIcon icon="👑" label="Admin" active={currentView === 'admin'} onClick={() => setCurrentView('admin')} />
+  )}
+</div>
 
         <div style={{ padding: '20px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
           <button onClick={handleLogout} className="danger-btn" style={{ width: '100%' }}>

@@ -23,4 +23,7 @@ router.post('/reset-password', resetPassword);
 // 5. Verify OTP (optional)
 router.post('/verify-otp', verifyOTP);
 
+// ❌ REMOVED: The duplicate activate announcement route
+// This functionality should be in broadcastRoutes.js only
+
 module.exports = router;
